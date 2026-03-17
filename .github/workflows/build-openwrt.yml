@@ -59,9 +59,8 @@ jobs:
           # 这是 Lean 推荐的自定义方式：创建一个 diy 脚本来添加插件源
           cat > diy-part1.sh <<EOF
           #!/bin/bash
-          # 添加 HomeProxy 和社区插件大礼包的源
+          # 我们暂时只添加 HomeProxy 的源，以隔离问题
           echo 'src-git homeproxy https://github.com/immortalwrt-community/homeproxy.git' >> feeds.conf.default
-          echo 'src-git small https://github.com/kenzok8/small.git' >> feeds.conf.default
           EOF
 
           # 运行脚本并更新安装 feeds
@@ -69,37 +68,38 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: 6. ✨ Generate .config file for Lean's source
-        run: |
-          cd lede
-          rm -f .config
-          
-          # 这份清单是为 Lean 的源码量身定制的
-          cat > .config <<EOF
-          # Target - Lean 的源使用 qualcommax 作为目标
-          CONFIG_TARGET_qualcommax=y
-          CONFIG_TARGET_qualcommax_generic=y
-          # 为 IPQ60xx 设备选择 NSS 固件
-          CONFIG_PACKAGE_nss-firmware-ipq6018=y
+      - name: 6. ✨ Generate a minimal .config with ONLY HomeProxy
+       run: |
+         cd lede
+         rm -f .config
+      
+         # 这份清单是我们的“最小可行性产品”
+         cat > .config <<EOF
+         # Target - Lean 的源使用 qualcommax 作为目标
+         CONFIG_TARGET_qualcommax=y
+         CONFIG_TARGET_qualcommax_generic=y
+         # 为 IPQ60xx 设备选择 NSS 固件
+         CONFIG_PACKAGE_nss-firmware-ipq6018=y
 
-          # Base - Lean 的源自带 ttyd, 我们只需选择 LuCI
-          CONFIG_PACKAGE_luci=y
-          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          
-          # Plugins (您需要的插件)
-          CONFIG_PACKAGE_luci-app-homeproxy=y
-          CONFIG_PACKAGE_luci-app-wireguard=y
-          CONFIG_PACKAGE_luci-app-reboot=y
-          CONFIG_PACKAGE_luci-app-passwall2=y
-          CONFIG_PACKAGE_luci-app-openclash=y
-          CONFIG_PACKAGE_luci-app-zerotier=y
-          EOF
-          
-          # 自动展开所有依赖
-          make defconfig
-          
-          # 保存最终的 .config 文件以供调试
-          cp .config ../${{ env.CONFIG_NAME }}
+         # Base - Lean 的源自带 ttyd, 我们只需选择 LuCI
+         CONFIG_PACKAGE_luci=y
+         CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+      
+         # Core Plugin - 我们只测试这一个！
+         CONFIG_PACKAGE_luci-app-homeproxy=y
+         CONFIG_PACKAGE_luci-app-wireguard=y
+         CONFIG_PACKAGE_luci-app-reboot=y
+         # 暂时禁用以下插件以排查冲突
+         # CONFIG_PACKAGE_luci-app-passwall2=y
+         # CONFIG_PACKAGE_luci-app-openclash=y
+         # CONFIG_PACKAGE_luci-app-zerotier=y
+         EOF
+      
+         # 自动展开所有依赖
+         make defconfig
+      
+         # 保存最终的 .config 文件以供调试
+         cp .config ../${{ env.CONFIG_NAME }}
 
       - name: 7. Compile the firmware
         run: |
