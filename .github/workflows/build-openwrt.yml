@@ -56,10 +56,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-
 
-      - name: 4. Clone OpenWrt source code
-        run: |
-          git clone --depth 1 -b ${{ env.OPENWRT_BRANCH }} ${{ env.OPENWRT_SOURCE }} openwrt
-          cd openwrt
+      - name: 4. Checkout a specific, stable commit of OpenWrt source
+        uses: actions/checkout@v4
+        with:
+          repository: robimarko/openwrt
+          # 这是一个几天前的稳定提交，以避开最新的BUG
+          ref: 5b18f5044431e21b066914b1c3132646c072c444
+          path: openwrt
 
       - name: 5. Update and install feeds & custom plugins
         run: |
