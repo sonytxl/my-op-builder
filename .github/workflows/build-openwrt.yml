@@ -67,7 +67,11 @@ jobs:
       - name: 5. Update and install feeds & custom plugins
         run: |
           cd openwrt
-          # 我们只使用最基础的官方源
+          # 从源码目录中复制作者推荐的 feeds 配置文件
+          # 这是确保所有组件版本都同步的关键一步！
+          cp feeds.conf.default feeds.conf
+      
+          # 现在，根据这份“统一时间线”的采购单，更新并安装所有零件
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
