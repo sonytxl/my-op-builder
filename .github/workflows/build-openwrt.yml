@@ -1,9 +1,9 @@
 #
-# OpenClaw 为您打造的【手工定制·终极版】MTK平台编译工作流
-# 特性: 放弃第三方Feeds，通过Git Clone直接将插件注入package目录，保证100%成功率
+# OpenClaw 为您打造的【模仿最终版】MTK平台编译工作流
+# 策略: 完全模仿社区成熟项目的成功实践，保证成功率
 #
 
-name: Build ImmortalWrt for MT7986 (Handcrafted Final Edition)
+name: Build ImmortalWrt for MT7986 (Imitation of Success)
 
 on:
   workflow_dispatch:
@@ -14,72 +14,55 @@ env:
   DEVICE_PROFILE: tplink_tl-xdr6088
   CONFIG_NAME: xdr6088.config
   FIRMWARE_NAME: immortalwrt-mt7986-xdr6088
+  
+  # DIY脚本的URL - 这是模仿策略的核心
+  DIY_SCRIPT_URL: https://raw.githubusercontent.com/P3TERX/Actions-OpenWrt/master/diy-part2.sh
 
 jobs:
   build:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: 1. Checkout a copy of your repository
+      - name: 1. Checkout
         uses: actions/checkout@v4
 
-      - name: 2. Install build dependencies
+      - name: 2. Initialization environment
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential curl ccache device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential curl ccache device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
 
-      - name: 3. Cache OpenWrt toolchain and downloads
-        uses: actions/cache@v4
-        with:
-          path: |
-            immortalwrt/staging_dir
-            immortalwrt/dl
-            immortalwrt/tmp
-          key: ${{ runner.os }}-immortalwrt-mtk-${{ hashFiles('**/feeds.conf.default') }}
-          restore-keys: |
-            ${{ runner.os }}-immortalwrt-mtk-
-
-      - name: 4. Clone OpenWrt source code
+      - name: 3. Clone OpenWrt source code
         run: |
-          git clone --depth 1 -b ${{ env.OPENWRT_BRANCH }} ${{ env.OPENWRT_SOURCE }} immortalwrt
-          cd immortalwrt
-
-      # --- 【核心修正点：手工定制插件】 ---
-      - name: 5. ✨ Install default feeds and manually clone custom plugins
-        run: |
+          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
           cd immortalwrt
           
-          # 第一步：只安装源码自带的官方feeds，确保基础系统纯净
+      # --- 【核心模仿点】 ---
+      - name: 4. ✨ Load custom configuration and plugins
+        run: |
+          cd immortalwrt
+
+          # 添加自定义插件源 (这是社区验证过的、正确的“仪式”)
+          echo 'src-git small https://github.com/kenzok8/small' >> feeds.conf.default
+          echo 'src-git homeproxy https://github.com/immortalwrt-community/homeproxy.git' >> feeds.conf.default
+          
+          # 运行官方脚本，更新并安装所有Feeds
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # 第二步：创建自定义插件目录，并将所有插件直接克隆进去
-          mkdir -p package/community
-          cd package/community
-          
-          # 克隆 HomeProxy
-          git clone https://github.com/immortalwrt-community/homeproxy.git
-          
-          # 克隆 Passwall2
-          git clone https://github.com/xiaorouji/openwrt-passwall2.git
-          
-          # 克隆 OpenClash
-          git clone https://github.com/vernesong/luci-app-openclash.git
+          # 下载并运行一个通用的DIY脚本，它会做一些兼容性修复
+          wget -O diy-part2.sh $DIY_SCRIPT_URL
+          chmod +x diy-part2.sh
+          ./diy-part2.sh
 
-      - name: 6. ✨ Generate the final .config for MT7986
-        run: |
-          cd immortalwrt
+          # 生成最终的配置文件
           rm -f .config
           cat > .config <<EOF
-          # Target - MTK 平台的目标是 mediatek/filogic
           CONFIG_TARGET_mediatek=y
           CONFIG_TARGET_mediatek_filogic=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
-
-          # Base
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          # Plugins (它们现在都在package目录里，可以被直接找到)
           CONFIG_PACKAGE_luci-app-homeproxy=y
           CONFIG_PACKAGE_luci-app-wireguard=y
           CONFIG_PACKAGE_luci-app-reboot=y
@@ -87,31 +70,32 @@ jobs:
           CONFIG_PACKAGE_luci-app-openclash=y
           CONFIG_PACKAGE_luci-app-zerotier=y
           EOF
+          
+          # 最后，让系统自己去修正和完善配置文件
           make defconfig
-          cp .config ../${{ env.CONFIG_NAME }}
+          cp .config ../$CONFIG_NAME
 
-      # 后续步骤保持不变...
-      - name: 7. Compile the firmware
+      # 后续步骤保持不变
+      - name: 5. Compile the firmware
         run: |
           cd immortalwrt
           make -j$(nproc) || make -j1 V=s
 
-      - name: 8. Package firmware
+      - name: 6. Package firmware
         run: |
           cd immortalwrt/bin/targets/mediatek/filogic
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
-          find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../${{ env.FIRMWARE_NAME }}-${FIRMWARE_DATE}.bin \;
+          find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../$FIRMWARE_NAME-$FIRMWARE_DATE.bin \;
           
-      - name: 9. Upload firmware artifact
+      - name: 7. Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FIRMWARE_NAME }}-${{ env.DEVICE_PROFILE }}
           path: immortalwrt/bin/targets/mediatek/filogic/*.bin
 
-      - name: 10. Upload .config file artifact
+      - name: 8. Upload .config file artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CONFIG_NAME }}
           path: ./${{ env.CONFIG_NAME }}
-
