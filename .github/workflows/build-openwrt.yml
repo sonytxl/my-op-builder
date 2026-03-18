@@ -1,16 +1,18 @@
 #
-# OpenClaw 为您打造的【精简终极版】MTK平台编译工作流
-# 策略: 只编译最基础的系统和LuCI，建立一个100%成功的基线
+# OpenClaw 为您打造的【精简终极版-正确分支】MTK平台编译工作流
+# 策略: 使用您发现的正确分支名，编译最基础的系统和LuCI
 #
 
-name: Build ImmortalWrt for MT7986 (Minimal Baseline)
+name: Build ImmortalWrt for MT7986 (Minimal Baseline - Correct Branch)
 
 on:
   workflow_dispatch:
 
 env:
+  # --- 【核心修正点】 ---
   OPENWRT_SOURCE: https://github.com/sagehou/immortalwrt-mt798x-6.6
-  OPENWRT_BRANCH: "2410"
+  OPENWRT_BRANCH: "openwrt-24.10-6.6" # 使用您找到的正确分支！
+
   DEVICE_PROFILE: tplink_tl-xdr6088
   CONFIG_NAME: xdr6088-minimal.config
   FIRMWARE_NAME: immortalwrt-mt7986-xdr6088-minimal
@@ -34,12 +36,9 @@ jobs:
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
           cd immortalwrt
 
-      # --- 【核心精简点】 ---
       - name: 4. ✨ Load ONLY default configurations
         run: |
           cd immortalwrt
-
-          # 我们不再添加任何第三方源，只使用源码自带的官方feeds
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
@@ -58,12 +57,9 @@ jobs:
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
           CONFIG_PACKAGE_luci-app-reboot=y # 保留一个最基础的核心应用
           EOF
-          
-          # 让系统自己去修正和完善配置文件
           make defconfig
           cp .config ../$CONFIG_NAME
 
-      # 后续步骤简化并保持
       - name: 6. Compile the firmware
         run: |
           cd immortalwrt
@@ -87,4 +83,3 @@ jobs:
         with:
           name: ${{ env.CONFIG_NAME }}
           path: ./${{ env.CONFIG_NAME }}
-
