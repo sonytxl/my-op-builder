@@ -51,12 +51,14 @@ jobs:
           CONFIG_TARGET_mediatek_filogic=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
 
-          # --- 【灵魂注入：启用硬件加速】---
-          # 启用硬件流量分载 (Hardware Flow Offloading)
+          # --- 【灵魂与躯体：同时启用硬件加速及其底层依赖】---
+          # 1. 启用硬件加速包
           CONFIG_HW_FLOW_OFFLOADING=y
-          # 启用MTK HNAT/WED硬件加速所需的关键内核模块
           CONFIG_PACKAGE_kmod-mtk-hnat=y
           CONFIG_PACKAGE_kmod-mtk-wed=y
+          
+          # 2. 启用它们依赖的底层内核功能 (这才是我们失败的关键)
+          CONFIG_DMA_SHARED_BUFFER=y
           
           # Base System & LuCI
           CONFIG_PACKAGE_luci=y
