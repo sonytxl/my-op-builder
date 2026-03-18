@@ -1,24 +1,18 @@
 #
-# OpenClaw 为您量身打造的 MTK 平台编译工作流
-# 源码: sagehou/immortalwrt-mt798x-6.6 (社区优化版)
-# 设备: TP-Link XDR6088 (MT7986 / filogic)
-# 特性: 2410分支 (稳定), 统一插件源
+# OpenClaw 为您打造的【终极健壮版】MTK平台编译工作流
+# 特性: 增加了网络操作的自动重试机制，以应对GitHub Actions的临时网络波动
 #
 
-name: Build ImmortalWrt for MT7986
+name: Build ImmortalWrt for MT7986 (Robust Edition)
 
 on:
   workflow_dispatch:
 
 env:
-  # 源码信息
+  # ... (这部分和之前一样，无需修改)
   OPENWRT_SOURCE: https://github.com/sagehou/immortalwrt-mt798x-6.6
-  OPENWRT_BRANCH: "2410" # 分支名可能是数字，用引号包起来更安全
-
-  # 设备信息
+  OPENWRT_BRANCH: "2410"
   DEVICE_PROFILE: tplink_tl-xdr6088
-
-  # 文件名定义
   CONFIG_NAME: xdr6088.config
   FIRMWARE_NAME: immortalwrt-mt7986-xdr6088
 
@@ -27,18 +21,14 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+      # Steps 1, 2, 3 和之前一样
       - name: 1. Checkout a copy of your repository
         uses: actions/checkout@v4
 
       - name: 2. Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
-          curl ccache device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged \
-          help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev \
-          libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build \
-          p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply qemu-utils rsync scons \
-          squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+          sudo apt-get install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential curl ccache device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
 
       - name: 3. Cache OpenWrt toolchain and downloads
         uses: actions/cache@v4
@@ -51,37 +41,55 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-immortalwrt-mtk-
 
-      - name: 4. Clone OpenWrt source code
+      # --- 【升级点 1】 ---
+      - name: 4. Clone OpenWrt source code (with retry)
         run: |
-          git clone --depth 1 -b ${{ env.OPENWRT_BRANCH }} ${{ env.OPENWRT_SOURCE }} immortalwrt
-          cd immortalwrt
+          for i in 1 2 3; do
+            if git clone --depth 1 -b ${{ env.OPENWRT_BRANCH }} ${{ env.OPENWRT_SOURCE }} immortalwrt; then
+              cd immortalwrt
+              break
+            fi
+            echo "Clone attempt $i failed. Retrying in 1 minute..."
+            sleep 60
+          done
+          if [ ! -d "immortalwrt" ]; then
+            echo "Failed to clone repository after 3 attempts."
+            exit 1
+          fi
 
-      - name: 5. ✨ Add the unified community feed
+      # --- 【升级点 2】 ---
+      - name: 5. ✨ Add feeds and install (with retry)
         run: |
           cd immortalwrt
-          # 我们只添加一个包含了所有第三方插件的、经过社区考验的“大礼包”
           echo 'src-git small https://github.com/kenzok8/small.git' >> feeds.conf.default
           
-          # 更新并安装所有 feeds (包括源码自带的和我们刚添加的)
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          for i in 1 2 3; do
+            if ./scripts/feeds update -a && ./scripts/feeds install -a; then
+              break
+            fi
+            echo "Feeds update/install attempt $i failed. Retrying in 1 minute..."
+            sleep 60
+          done
+          # 检查是否成功，不成功则退出
+          if [ ! -d "feeds/small" ];
+          then
+          echo "Failed to update feeds after 3 attempts."
+             exit 1
+          fi
 
+      # Steps 6, 7, 8, 9, 10 和之前一样
       - name: 6. ✨ Generate the final .config for MT7986
         run: |
           cd immortalwrt
           rm -f .config
-          
-          # 这是为 XDR6088 量身打造的最终“装修清单”
           cat > .config <<EOF
           # Target - MTK 平台的目标是 mediatek/filogic
           CONFIG_TARGET_mediatek=y
           CONFIG_TARGET_mediatek_filogic=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
-
           # Base
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          
           # Plugins (全部来自 kenzok8/small, 兼容性最佳)
           CONFIG_PACKAGE_luci-app-homeproxy=y
           CONFIG_PACKAGE_luci-app-wireguard=y
@@ -90,11 +98,7 @@ jobs:
           CONFIG_PACKAGE_luci-app-openclash=y
           CONFIG_PACKAGE_luci-app-zerotier=y
           EOF
-          
-          # 自动展开所有依赖
           make defconfig
-          
-          # 保存最终的 .config 文件以供调试
           cp .config ../${{ env.CONFIG_NAME }}
 
       - name: 7. Compile the firmware
@@ -106,11 +110,9 @@ jobs:
         run: |
           cd immortalwrt/bin/targets/mediatek/filogic
           rm -rf packages
-          # 为固件添加日期后缀
           FIRMWARE_DATE=$(date +%Y-%m-%d)
-          # 找到 XDR6088 的固件并重命名
           find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../${{ env.FIRMWARE_NAME }}-${FIRMWARE_DATE}.bin \;
-      
+          
       - name: 9. Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
@@ -122,4 +124,3 @@ jobs:
         with:
           name: ${{ env.CONFIG_NAME }}
           path: ./${{ env.CONFIG_NAME }}
-
