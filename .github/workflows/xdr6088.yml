@@ -1,4 +1,3 @@
-
 name: Build ImmortalWrt for MT7986 xdr6088 (Ultimate Speed Edition)
 
 on:
@@ -24,60 +23,43 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # 极速清理不必要的系统级组件，瞬间释放空间
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
           sudo -E apt-get -qq update
-          # 安装编译依赖，加入 ccache 支持
-          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential curl ccache device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
       - name: 3. Clone Correct OpenWrt source code
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      # 引入 Github Actions 的缓存机制，针对 ccache 进行缓存
       - name: 4. Setup ccache
         uses: actions/cache@v4
         with:
           path: ~/.ccache
-          # 缓存 key 根据操作系统和工作流名称生成，只要不清理缓存，后续编译直接起飞
           key: ${{ runner.os }}-openwrt-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-
 
-      - name: 5. ✨ Generate the ULTIMATE .config file
+      # 👇 就是这一步上一次被我不小心让你删掉了，这是导致失败的元凶！
+      - name: 5. Load Feeds configurations
+        run: |
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+      - name: 6. ✨ Generate the ULTIMATE .config file
         run: |
           chmod +x ./diy1.sh
           cd immortalwrt
           
           # 第一步：铺上你从虚拟机提取的完美“硬件底盘”，保证闭源驱动不死机
+          # (请确保你的 config.txt 已改名为 xdr6088.config 并放在仓库根目录)
           cp ../xdr6088.config .config
           
-          # 第二步：运行你的 diy.sh，把你想加的插件和 IP 动态注入到底盘上！
+          # 第二步：运行你的 diy.sh，下载插件源码，并把插件追加到底盘上！
           ../diy1.sh
           
           # 第三步：引擎融合！系统会自动把你追加的插件和底层驱动完美融合，并补齐缺少的依赖
-          make defconfig
-          cp .config ../$CONFIG_NAME
-          
-      - name: 6. ✨ Generate the ULTIMATE .config file
-        run: |
-          cd immortalwrt
-          rm -f .config
-          cat > .config <<EOF
-          # Target - filogic 架构匹配 6.6 分支
-          CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_filogic=y
-          CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
-
-          # --- 核心优化：开启编译器缓存 ---
-          CONFIG_CCACHE=y
-          
-          # Base System & LuCI
-          CONFIG_PACKAGE_luci=y
-          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          CONFIG_PACKAGE_luci-app-reboot=y
-          EOF
           make defconfig
           cp .config ../$CONFIG_NAME
 
@@ -91,17 +73,19 @@ jobs:
         id: compile
         run: |
           cd immortalwrt
-          # 记录编译状态，失败则返回非 0 值触发下一步的容错
           echo -e "$(nproc) thread compile"
-          make -j$(nproc) || make -j1 V=s
+          make -j$(nproc) || {
+            echo "多线程编译失败，正在使用单线程生成详细日志..."
+            make -j1 V=s 2>&1 | tee compile_error.log
+            exit 1
+          }
 
-      # 当第8步编译失败时，自动打包 build_dir 和 logs 中的报错信息
       - name: 9. Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: OpenWrt_compile_logs
-          path: immortalwrt/logs/
+          name: OpenWrt_compile_error_log
+          path: immortalwrt/compile_error.log
           
       - name: 10. Package firmware
         if: success()
@@ -109,7 +93,6 @@ jobs:
           cd immortalwrt/bin/targets/mediatek/filogic
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
-          # 将所有生成的固件放入统一文件夹方便打包
           mkdir -p firmware_release
           find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ./firmware_release/ \;
           cd firmware_release
