@@ -45,27 +45,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-
 
-      - name: 5. ✨ Generate the ULTIMATE .config file
+      - name: 5. ✨ Generate the ULTIMATE .config file (Using Author's Defconfig)
         run: |
           cd immortalwrt
-          rm -f .config
-          cat > .config <<EOF
-          # 1. 明确底层架构
-          CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_filogic=y
-          CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
-
-          # 2. ⚠️ 核心修复：强制开启闭源 HNAT 与 WED 驱动！
-          # （这能生成 mtk_eth_soc.c 急需的底层宏定义头文件）
-          CONFIG_HW_FLOW_OFFLOADING=y
-          CONFIG_PACKAGE_kmod-mtk-hnat=y
-          CONFIG_PACKAGE_kmod-mtk-wed=y
           
-          # 3. 基础界面支持
+          # 1. 核心破局：直接复制作者调教好的 MT7986 完美闭源驱动模板
+          cp -f defconfig/mt7986-ax6000.config .config
+          
+          # 2. 在完美模板的基础上，追加我们专属的 XDR6088 设定和必要插件
+          cat >> .config <<EOF
+          
+          # 覆盖/追加目标设备为 XDR6088
+          CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
+          
+          # 基础 UI 界面 (模板里可能没包含，保险起见加上)
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
           CONFIG_PACKAGE_luci-app-reboot=y
           EOF
+          
+          # 3. 运行 defconfig，让引擎将模板和我们的追加要求完美融合
           make defconfig
           cp .config ../$CONFIG_NAME
           
