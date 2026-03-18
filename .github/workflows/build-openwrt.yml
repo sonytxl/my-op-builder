@@ -95,9 +95,7 @@ jobs:
           make defconfig
           
           # 保存最终的 .config 文件以供调试
-          cp .config ../${{ env
-          .CONFIG
-          _NAME }}
+          cp .config ../${{ env.CONFIG_NAME }}
 
       - name: 7. Compile the firmware
         run: |
@@ -112,7 +110,7 @@ jobs:
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           # 找到 XDR6088 的固件并重命名
           find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../${{ env.FIRMWARE_NAME }}-${FIRMWARE_DATE}.bin \;
-          
+      
       - name: 9. Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
@@ -123,4 +121,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CONFIG_NAME }}
-          path: ./${{ env.CONFIG_NAME }} 
+          path: ./${{ env.CONFIG_NAME }}
+
