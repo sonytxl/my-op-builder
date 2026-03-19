@@ -1,19 +1,17 @@
-#
-# OpenClaw 为您打造的【MT7981多设备·终极版】编译工作流
-# 策略: 使用我们验证过的成功公式，一次性为多个MT7981设备编译带HNAT的精简固件
-#
-
-name: Build ImmortalWrt for MT7981 (Multi-Device HNAT Edition)
+name: Build ImmortalWrt for MT7981 (4-in-1 Multi-Device)
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
-  OPENWRT_BRANCH: "2410" 
+  OPENWRT_BRANCH: "openwrt-24.10-6.6" 
 
-  CONFIG_NAME: mt7981-multi-hnat.config
-  FIRMWARE_NAME: immortalwrt-mt7981-hnat
+  CONFIG_NAME: mt7981.config
+  FIRMWARE_NAME: immortalwrt-mt7981-multi
 
 jobs:
   build:
@@ -23,77 +21,116 @@ jobs:
       - name: 1. Checkout
         uses: actions/checkout@v4
 
-      - name: 2. Initialization environment
+      - name: 2. Free Disk Space & Init Environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
           sudo -E apt-get -qq update
-          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential curl ccache device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
       - name: 3. Clone Correct OpenWrt source code
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
-          cd immortalwrt
 
-      - name: 4. ✨ Load ONLY default configurations
+      - name: 4. Setup ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-openwrt-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-ccache-
+
+      - name: 5. Load Feeds configurations
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-      - name: 5. ✨ Generate the ULTIMATE .config file for multiple devices
+      - name: 6. ✨ Generate the ULTIMATE .config file (Multi-Device)
         run: |
+          chmod +x ./diy.sh
           cd immortalwrt
-          rm -f .config
-          cat > .config <<EOF
-          # Target - MT7981和MT7986都属于mediatek/filogic平台
-          CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_filogic=y
           
-          # --- 【多设备选择】---
+          # 1. 铺上你导出的 MT7981 完美底盘
+          cp ../mt7981.config .config
+          
+          # 2. 核心魔法：强制开启多设备编译，并写入 4 个目标路由器
+          cat >> .config <<EOF
+          CONFIG_TARGET_MULTI_PROFILE=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_qihoo_360t7=y
-          CONFIG_TARGET_mediatek_filogic_DEVICE_cmcc_cm3000-m=y
+          CONFIG_TARGET_mediatek_filogic_DEVICE_cmcc_rax3000m=y
+          # 如果你的 RAX3000M 是 eMMC 版，可以把下面这行的 # 去掉一起编译
+          # CONFIG_TARGET_mediatek_filogic_DEVICE_cmcc_rax3000m-emmc=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_cmcc_xr30=y
-          CONFIG_TARGET_mediatek_filogic_DEVICE_jcg_q30=y
-
-          # --- 【灵魂注入：启用硬件加速】---
-          CONFIG_HW_FLOW_OFFLOADING=y
-          CONFIG_PACKAGE_kmod-mtk-hnat=y
-          CONFIG_PACKAGE_kmod-mtk-wed=y
-          
-          # Base System & LuCI
-          CONFIG_PACKAGE_luci=y
-          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          CONFIG_PACKAGE_luci-app-reboot=y
+          CONFIG_TARGET_mediatek_filogic_DEVICE_jcg_q30-pro=y
           EOF
+          
+          # 3. 运行你的 diy.sh，注入插件和修改 IP
+          ../diy.sh
+          
+          # 4. 融合配置
           make defconfig
           cp .config ../$CONFIG_NAME
 
-      - name: 6. Compile the firmware
+      - name: 7. Download packages
         run: |
           cd immortalwrt
-          make -j$(nproc) || make -j1 V=s
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-      - name: 7. Package firmware
+      - name: 8. Compile the firmware
+        id: compile
+        run: |
+          cd immortalwrt
+          echo -e "$(nproc) thread compile"
+          make -j$(nproc) || {
+            echo "多线程编译失败，正在使用单线程生成详细日志..."
+            make -j1 V=s 2>&1 | tee compile_error.log
+            exit 1
+          }
+
+      - name: 9. Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_compile_error_log
+          path: immortalwrt/compile_error.log
+          
+      - name: 10. Package firmware
+        if: success()
         run: |
           cd immortalwrt/bin/targets/mediatek/filogic
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
-          # 为每个设备的固件进行重命名
-          for device in qihoo_360t7 cmcc_cm3000-m cmcc_xr30 jcg_q30; do
-            find . -name "*${device}*.bin" -exec mv {} ../${FIRMWARE_NAME}-${device}-${FIRMWARE_DATE}.bin \;
-          done
+          mkdir -p firmware_release
           
-      - name: 8. Upload firmware artifact
-        uses: actions/upload-artifact@v4
+          # 提取所有包含我们要的 4 个设备名字的 bin 固件
+          find . -type f -name "*.bin" -exec mv {} ./firmware_release/ \;
+          cd firmware_release
+          for f in *.bin; do mv "$f" "mt7981-${FIRMWARE_DATE}-${f}"; done
+          
+      - name: 11. Generate release tag
+        if: success()
+        run: |
+          echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_date=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
+          
+      - name: 12. Upload firmware to Release
+        uses: softprops/action-gh-release@v2
+        if: success()
         with:
-          name: ${{ env.FIRMWARE_NAME }}-firmwares
-          path: immortalwrt/bin/targets/mediatek/filogic/*.bin
-
-
-      - name: 9. Upload .config file artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.CONFIG_NAME }}
-          path: ./${{ env.CONFIG_NAME }}
-
-       
+          tag_name: ${{ env.release_tag }}
+          name: 🚀 MT7981 (4合1) 闭源满血固件 (${{ env.release_date }})
+          files: immortalwrt/bin/targets/mediatek/filogic/firmware_release/*.bin
+          body: |
+            ## 🚀 MT7981 多设备同编版
+            - **源码分支**: `padavanonly/immortalwrt-mt798x-6.6`
+            - **包含设备**: CMCC RAX3000M, CMCC XR30, JCG Q30-Pro, 360T7
+            - **核心特性**: 闭源 Wi-Fi 驱动 + WED/HNAT 硬件加速
+            - **编译时间**: ${{ env.release_date }}
+            
+            **默认配置**:
+            - 默认 IP: 根据你的 diy.sh 设置 (通常为 `192.168.50.1`)
+            - 默认密码: `无` (首次登录请设置密码)
