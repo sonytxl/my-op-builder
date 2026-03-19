@@ -8,7 +8,6 @@ permissions:
 
 env:
   # ⚠️ 注意：请确认这个仓库链接里是否有 2410 分支。
-  # 如果老版本源码在别的仓库（比如 padavanonly/immortalwrt），请修改这里！
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
   OPENWRT_BRANCH: "2410" 
 
