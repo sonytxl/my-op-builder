@@ -26,6 +26,9 @@ echo "✅ 默认 IP 已修改为 192.168.61.1"
 
 cat >> .config <<EOF
 
+# 在 diy.sh 中把 =y 替换成 is not set，就能强行卸载底盘自带的插件
+# sed -i 's/CONFIG_PACKAGE_luci-app-samba4=y/# CONFIG_PACKAGE_luci-app-samba4 is not set/g' .config
+
 # --- 基础实用工具 ---
 CONFIG_PACKAGE_luci-app-autoreboot=y
 CONFIG_PACKAGE_luci-app-ddns=y
