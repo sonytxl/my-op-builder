@@ -35,6 +35,8 @@ CONFIG_PACKAGE_luci-app-ddns=y
 CONFIG_PACKAGE_luci-app-upnp=y
 # CONFIG_PACKAGE_luci-app-wol=y
 # CONFIG_PACKAGE_luci-app-samba4=y 
+# CONFIG_PACKAGE_luci-app-usb-printer=y
+# CONFIG_PACKAGE_luci-app-wrtbwmon=y
 
 # --- 科学上网核心 ---
 # 我们刚刚在上面拉取了源码，现在这里设为 y 就会生效了！
