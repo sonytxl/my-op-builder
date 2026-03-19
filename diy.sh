@@ -38,9 +38,9 @@ CONFIG_PACKAGE_luci-app-upnp=y
 
 # --- 科学上网核心 ---
 # 我们刚刚在上面拉取了源码，现在这里设为 y 就会生效了！
-# CONFIG_PACKAGE_luci-app-ssr-plus=y
+CONFIG_PACKAGE_luci-app-ssr-plus=y
 
-# CONFIG_PACKAGE_luci-app-homeproxy=y
+CONFIG_PACKAGE_luci-app-homeproxy=y
 # CONFIG_PACKAGE_luci-app-openclash=y
 # CONFIG_PACKAGE_luci-app-passwall=y
 
