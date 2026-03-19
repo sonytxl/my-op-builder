@@ -29,12 +29,19 @@ CONFIG_PACKAGE_luci-app-autoreboot=y
 CONFIG_PACKAGE_luci-app-ddns=y
 CONFIG_PACKAGE_luci-app-upnp=y
 
-# --- 科学上网核心 ---
-CONFIG_PACKAGE_luci-app-homeproxy=y
+# --- ⚠️ 科学上网核心 (HomeProxy 暂时屏蔽) ---
+# 你的日志明确提示此 2410 分支缺少 HomeProxy 必须的 ucode-mod-digest
+# 为了保证这次 MTK 必定编译成功，先把它屏蔽掉，只用 SSR-Plus！
+# CONFIG_PACKAGE_luci-app-homeproxy=y
 
 # --- 异地组网 / 虚拟局域网 ---
 CONFIG_PACKAGE_luci-app-wireguard=y
 CONFIG_PACKAGE_luci-app-zerotier=y
+
+# =======================================================
+# 🚀 终极防线：开启官方预编译 Rust，绕过本地地狱编译！
+# =======================================================
+CONFIG_RUST_USE_PREBUILT_HOST=y
 
 # =======================================================
 # 🚀 核心定制：保留极其纯净的 SSR-Plus (按截图1:1定制)
@@ -44,6 +51,12 @@ CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_New_Version_Server=y
 CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_V2ray_Plugin=y
 CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Xray=y
 CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_MosDNS=y
+
+# --- 补充：万一底层需要，开启极度省内存的经典 C 语言版 SS ---
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Libev_Client=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Libev_Server=y
+CONFIG_PACKAGE_shadowsocks-libev-ss-local=y
+CONFIG_PACKAGE_shadowsocks-libev-ss-redir=y
 
 # --- 软屏蔽其它不必要的协议 ---
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Rust_Client is not set
