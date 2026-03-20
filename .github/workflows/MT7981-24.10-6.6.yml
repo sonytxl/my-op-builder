@@ -56,10 +56,10 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 5. Setup ccache
+      - name: 5. Setup ccache (修复缓存路径)
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          path: immortalwrt/.ccache
           key: ${{ runner.os }}-openwrt-mt7981-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-mt7981-ccache-
@@ -115,16 +115,15 @@ jobs:
           # ⚠️ 全局智能提取，无视路径变化
           mkdir -p firmware_release
           find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
-          
           cd firmware_release
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           for f in *; do mv "$f" "MT7981-${FIRMWARE_DATE}-${f}"; done
           
-      - name: 12. Generate release tag
+      - name: 12. Generate release tag (注入北京时间)
         if: success()
         run: |
-          echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
-          echo "release_date=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
+          echo "release_tag=$(TZ='Asia/Shanghai' date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_date=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M")" >> $GITHUB_ENV
           
       - name: 13. Upload firmware to Release
         uses: softprops/action-gh-release@v2
@@ -139,10 +138,10 @@ jobs:
             - **分支版本**: `openwrt-24.10-6.6`
             - **核心优势**: Linux 6.6 现代内核 + 联发科官方闭源 Wi-Fi 加速
             
-            **预期包含功能** (由精简配置触发):
-            - 科学上网：SSR-Plus, HomeProxy
-            - 异地组网：WireGuard, ZeroTier
-            - 编译时间: ${{ env.release_date }}
+            **包含核心插件**:
+            - ✈️ **科学双擎**: SSR-Plus, HomeProxy
+            - 🌍 **异地组网**: WireGuard, ZeroTier
+            - **编译时间**: ${{ env.release_date }}
             
             **系统默认信息**:
             - 默认 IP: `192.168.61.1`
