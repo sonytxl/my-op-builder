@@ -142,7 +142,6 @@ jobs:
             **预期包含功能** (由精简配置触发):
             - 科学上网：SSR-Plus, HomeProxy
             - 异地组网：WireGuard, ZeroTier
-            - NAS 扩展：Samba4, Filebrowser
             - 编译时间: ${{ env.release_date }}
             
             **系统默认信息**:
