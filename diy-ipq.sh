@@ -17,14 +17,10 @@ rm -rf package/helloworld/hysteria
 rm -rf package/helloworld/trojan
 rm -rf package/helloworld/naiveproxy
 
-# 4. 强行拉取 Tailscale 的清爽版 UI 面板源码 (asvow 版)
-echo "📦 正在注入 luci-app-tailscale  asvow 源码..."
-git clone https://github.com/asvow/luci-app-tailscale.git package/luci-app-tailscale
-
-# 5. 加入预编译 Rust 保底防线
+# 4. 加入预编译 Rust 保底防线
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 
-# 6. 开启全局编译缓存（高通提速核心！）
+# 5. 开启全局编译缓存 (高通提速核心！)
 echo "📦 正在开启高通全局 Ccache 编译缓存..."
 echo "CONFIG_CCACHE=y" >> .config
 
