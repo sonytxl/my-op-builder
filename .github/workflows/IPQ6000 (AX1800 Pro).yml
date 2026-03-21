@@ -36,7 +36,6 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           rustc --version
           
-          # ⚠️ 注意这里：强制给 Ubuntu 环境安装了 ccache
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install -y ccache ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
@@ -44,12 +43,11 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. Setup ccache (高通专属系统级路径)
+      - name: 4. Setup ccache (彻底修复系统级路径)
         uses: actions/cache@v4
         with:
-          # ⚠️ 路径改回了老版本的系统根目录
-          path: ~/.ccache
-          key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.sha }}
+          path: immortalwrt/.ccache
+          key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq6000-ccache-
 
@@ -81,10 +79,10 @@ jobs:
         run: |
           cd immortalwrt
           echo -e "$(nproc) thread compile"
-          # ⚠️ 终极保险：强行在 make 时指定缓存目录变量
-          make -j$(nproc) CCACHE_DIR=~/.ccache || {
+          # ⚠️ 删除了之前强制绑定的 CCACHE_DIR=~/.ccache
+          make -j$(nproc) || {
             echo "多线程编译失败，正在使用单线程生成详细日志..."
-            make -j1 V=s CCACHE_DIR=~/.ccache 2>&1 | tee compile_error.log
+            make -j1 V=s 2>&1 | tee compile_error.log
             exit 1
           }
 
