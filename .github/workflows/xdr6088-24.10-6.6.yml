@@ -58,6 +58,7 @@ jobs:
           key: ${{ runner.os }}-openwrt-mt7986-ccache-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-openwrt-mt7986-ccache-
+            ${{ runner.os }}-openwrt-mt7981-ccache-
 
       - name: 6. Load Feeds
         run: |
@@ -127,6 +128,9 @@ jobs:
             - **源码仓库**: `padavanonly/immortalwrt-mt798x-6.6`
             - **分支版本**: `openwrt-24.10-6.6`
             - **核心优势**: Linux 6.6 现代内核 + 联发科官方闭源 Wi-Fi 加速，极致精简
+
+            🚀 **基础功能**:
+            - 自动重启，终端，ddns，upnp
             
             💡 **适配机型**:
             - 完美支持：`TP-Link TL-XDR6088` (128M 大分区版)
