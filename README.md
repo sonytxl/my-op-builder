@@ -1,4 +1,5 @@
-# 🚀 京东云亚瑟 (JDCloud AX1800 Pro) 专属满血固件 高通IPQ6000 闭源 Wi-Fi 驱动 + NSS 硬件加速
+# 🚀 京东云亚瑟 (JDCloud AX1800 Pro) 
+专属满血固件 高通IPQ6000 闭源 Wi-Fi 驱动 + NSS 硬件加速
 
 基于 ImmortalWrt 主线源码云端编译，集成全套极客核心插件。
 
