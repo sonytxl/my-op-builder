@@ -46,8 +46,8 @@ jobs:
       - name: 4. Setup ccache (彻底修复系统级路径)
         uses: actions/cache@v4
         with:
-          path: immortalwrt/.ccache
-          key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.run_id }}
+          path: ${{ github.workspace }}/immortalwrt/.ccache
+          key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq6000-ccache-
 
@@ -79,7 +79,8 @@ jobs:
         run: |
           cd immortalwrt
           echo -e "$(nproc) thread compile"
-          # ⚠️ 删除了之前强制绑定的 CCACHE_DIR=~/.ccache
+          # ⚠️ 重新绑定 CCACHE_DIR，让编译器能找到缓存
+          export CCACHE_DIR=$GITHUB_WORKSPACE/immortalwrt/.ccache
           make -j$(nproc) || {
             echo "多线程编译失败，正在使用单线程生成详细日志..."
             make -j1 V=s 2>&1 | tee compile_error.log
@@ -123,13 +124,14 @@ jobs:
             🚀 **基础功能**:
             - 自动重启，终端，ddns，upnp
             
-            **包含核心插件**:
+            🧩 **包含核心插件**:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
+            - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🌍 **异地组网**: WireGuard, ZeroTier
             - 🗄️ **轻量 NAS**: Samba4, Filebrowser (绝美网页文件管理)
             - 🎨 **界面美化**: Argon 主题 + 完美中文支持
-            - 编译时间: ${{ env.release_date }}
             
-            **系统默认信息**:
+            ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.61.1`
             - 默认密码: `无`
+            - 编译时间: ${{ env.release_date }}
