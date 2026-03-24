@@ -120,6 +120,9 @@ jobs:
             - **源码仓库**: `VIKINGYFY/immortalwrt` (main 分支)
             - **核心特性**: 纯血高通闭源 Wi-Fi 驱动 + NSS 硬件加速
             
+            🚀 **基础功能**:
+            - 自动重启，终端，ddns，upnp
+            
             **包含核心插件**:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
             - 🌍 **异地组网**: WireGuard, ZeroTier
