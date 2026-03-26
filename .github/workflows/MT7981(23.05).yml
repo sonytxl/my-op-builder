@@ -129,10 +129,12 @@ jobs:
           files: immortalwrt/bin/targets/mediatek/mt7981/firmware_release/*.bin
           body: |
             ## 🚀 MT7981 黄金稳定版
-            - **源码分支**: `openwrt-23.05` (内核 5.15，低运存占用)
-            - **包含设备**: CMCC RAX3000M, JCG Q30, 360T7
-            - **核心特性**: 纯血闭源 Wi-Fi 驱动 + WED/HNAT 硬件加速，完美兼容最新 HomeProxy & SSR+
-            
+            - 🚀**源码分支**: `openwrt-23.05` (内核 5.15，低运存占用)
+            - 🚀**包含设备**: CMCC RAX3000M, JCG Q30, 360T7
+            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
+            - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
+            - 🌍 **异地组网**: WireGuard, ZeroTier
+             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
             - 默认密码: `无`
