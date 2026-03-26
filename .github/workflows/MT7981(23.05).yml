@@ -125,12 +125,12 @@ jobs:
         if: success()
         with:
           tag_name: ${{ env.release_tag }}
-          name: 🚀 MT7981 (4合1) 稳定版 23.05 (${{ env.release_date }})
+          name: 🚀 MT7981 (3合1) 稳定版 23.05 (${{ env.release_date }})
           files: immortalwrt/bin/targets/mediatek/mt7981/firmware_release/*.bin
           body: |
             ## 🚀 MT7981 黄金稳定版
             - **源码分支**: `openwrt-23.05` (内核 5.15，低运存占用)
-            - **包含设备**: CMCC RAX3000M, CMCC XR30, JCG Q30, 360T7
+            - **包含设备**: CMCC RAX3000M, JCG Q30, 360T7
             - **核心特性**: 纯血闭源 Wi-Fi 驱动 + WED/HNAT 硬件加速，完美兼容最新 HomeProxy & SSR+
             
             ⚙️ **系统默认信息**:
