@@ -1,21 +1,40 @@
 #!/bin/bash
 echo "🚀 开始执行 MTK 7981 (23.05 分支) 编译前置任务..."
 
-# 1. 修改默认 IP (目标改为 192.168.51.1)
+# 1. 修改默认 IP
 echo "🔧 正在修改默认 IP 地址..."
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 
-# 2. 修改默认主机名 (可选，让你的固件看起来更专业)
+# 2. 修改默认主机名
 echo "🏷️ 正在修改默认主机名..."
 sed -i 's/ImmortalWrt/EComRouter/g' package/base-files/files/bin/config_generate
 
-# 3. 拉取 Tailscale 图形界面源码 (如果需要，取消下面两行的注释即可)
-# echo "📦 正在注入 luci-app-tailscale 源码..."
-# git clone https://github.com/asvow/luci-app-tailscale.git package/luci-app-tailscale
+# 3. 注入 SSR-Plus 源码
+echo "📦 正在拉取 luci-app-ssr-plus 源码..."
+git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
-# 4. 加入预编译 Rust 保底防线 (保留这个好习惯)
+# 4. 解决冲突：物理清除 helloworld 自带的、与系统官方源冲突的底层核心包
+# 这样 SSR Plus 就会乖乖去调用 ImmortalWrt 系统自带的稳定核心了
+echo "🧹 正在清理冲突组件..."
+rm -rf package/helloworld/xray-core
+rm -rf package/helloworld/v2ray-core
+rm -rf package/helloworld/sing-box
+rm -rf package/helloworld/shadowsocks-rust
+rm -rf package/helloworld/shadow-tls
+rm -rf package/helloworld/tuic-client
+rm -rf package/helloworld/hysteria
+rm -rf package/helloworld/trojan
+rm -rf package/helloworld/naiveproxy
+rm -rf package/helloworld/v2ray-geodata
+rm -rf package/helloworld/microsocks
+rm -rf package/helloworld/dns2tcp
+rm -rf package/helloworld/tcping
+rm -rf package/helloworld/v2ray-plugin
+rm -rf package/helloworld/xray-plugin
+
+# 5. 加入预编译 Rust 保底防线
 echo "🛡️ 注入 Rust 预编译防线..."
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 
-echo "✅ 前置环境准备完毕！依靠 23.05 原生源，告别依赖地狱！"
+echo "✅ 前置环境准备完毕！"
