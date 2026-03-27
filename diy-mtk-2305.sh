@@ -37,4 +37,8 @@ rm -rf package/helloworld/xray-plugin
 echo "🛡️ 注入 Rust 预编译防线..."
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 
+# 6. 开启全局编译缓存 (配合 Github Actions 提速！)
+echo "⚡ 开启全局 Ccache 编译缓存..."
+echo "CONFIG_CCACHE=y" >> .config
+
 echo "✅ 前置环境准备完毕！"
