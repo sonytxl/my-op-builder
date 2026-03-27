@@ -15,7 +15,7 @@ git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
 # 4. 【核心修复】解决 xray-core 编译失败问题
 echo "🛠️ 正在执行 xray-core 编译优化策略..."
-# (A) 物理删除官方 feeds 里的 xray-core，防止它和 helloworld 里的版本冲突（这是你之前报错的主因）
+# (A) 物理删除官方 feeds 里的 xray-core，防止它和 helloworld 里的版本冲突
 rm -rf feeds/packages/net/xray-core
 # (B) 确保保留 helloworld 里的 xray-core，不要执行 rm 操作
 # (C) 清理其他不需要的组件
@@ -27,11 +27,9 @@ rm -rf package/helloworld/hysteria
 rm -rf package/helloworld/trojan
 rm -rf package/helloworld/naiveproxy
 
-# 5. 注入 Go 语言编译内存优化（针对 7986 高性能核心的防溢出设置）
-echo "🛡️ 注入 Go/Rust 编译环境优化..."
+# 5. 加入预编译 Rust 保底防线 (已删除导致报错的 Go 环境强制指定)
+echo "🛡️ 注入 Rust 预编译防线..."
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
-echo "CONFIG_GOLANG_EXTERNAL_BOOTSTRAP=y" >> .config
-echo "CONFIG_GOLANG_BOOTSTRAP_ROOT=\"/opt/go\"" >> .config
 
 # 6. 开启全局编译缓存
 echo "⚡ 开启全局 Ccache 编译缓存..."
