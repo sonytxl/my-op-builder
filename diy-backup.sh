@@ -1,56 +1,74 @@
 #!/bin/bash
-echo "🚀 开始执行编译前置任务..."
+echo "🚀 开始执行 MTK 7986 (XDR6088) 终极量产版编译前置任务..."
 
 # 1. 修改默认 IP
-sed -i 's/192.168.1.1/192.168.61.1/g' package/base-files/files/bin/config_generate
+echo "🔧 正在修改默认 IP 地址为 192.168.51.1..."
+sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 
-# 2. 核心大招：拉取 SSR-Plus 源码
+# 2. 修改默认主机名
+echo "🏷️ 正在修改默认主机名为 Ecom-7986-Pro..."
+sed -i 's/ImmortalWrt/Ecom-7986-Pro/g' package/base-files/files/bin/config_generate
+
+# 3. 注入 SSR-Plus 源码
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
 git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
-# 3. 物理清除 SSR-Plus 中极易报错的组件
-echo "🧹 物理清除容易报错的组件..."
+# 4. 【核心修复】解决 xray-core 编译失败问题
+echo "🛠️ 正在执行 xray-core 编译优化策略..."
+# (A) 物理删除官方 feeds 里的 xray-core，防止它和 helloworld 里的版本冲突（这是你之前报错的主因）
+rm -rf feeds/packages/net/xray-core
+# (B) 确保保留 helloworld 里的 xray-core，不要执行 rm 操作
+# (C) 清理其他不需要的组件
+rm -rf package/helloworld/sing-box
 rm -rf package/helloworld/shadowsocks-rust
+rm -rf package/helloworld/shadow-tls
 rm -rf package/helloworld/tuic-client
 rm -rf package/helloworld/hysteria
 rm -rf package/helloworld/trojan
 rm -rf package/helloworld/naiveproxy
 
-# 4. 加入预编译 Rust 保底防线 & 开启缓存
+# 5. 注入 Go 语言编译内存优化（针对 7986 高性能核心的防溢出设置）
+echo "🛡️ 注入 Go/Rust 编译环境优化..."
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
-echo "CONFIG_DEVEL=y" >> .config
+echo "CONFIG_GOLANG_EXTERNAL_BOOTSTRAP=y" >> .config
+echo "CONFIG_GOLANG_BOOTSTRAP_ROOT=\"/opt/go\"" >> .config
+
+# 6. 开启全局编译缓存
+echo "⚡ 开启全局 Ccache 编译缓存..."
 echo "CONFIG_CCACHE=y" >> .config
 
-# 5. 注入开机自动配置脚本 (密码、WiFi、ZeroTier)
-echo "📜 正在注入开机自动配置脚本..."
+# 7. 注入开机自动配置脚本 (ZeroTier + Moon + WiFi + 密码)
+echo "📜 正在注入自动化量产脚本..."
 mkdir -p package/base-files/files/etc/uci-defaults
 cat << "EOF" > package/base-files/files/etc/uci-defaults/999-custom-settings
 #!/bin/sh
 
-# ================= (1) 设置默认密码 =================
+# (1) 设置默认密码为 password
 sed -i 's/^\(root:\)[^:]*:/\1$1$V4UetPzk$CYXluq41wU.F4HnvQ.6hX.:/' /etc/shadow
 
-# ================= (2) ZeroTier 自动化配置 =================
-# 请把你真实的 ZeroTier 16位 Network ID 填在下面的双引号里
-ZT_NET_ID="替换成你的16位ZeroTier网络ID"
-
-# 清理可能存在的旧配置，创建全新节点
+# (2) ZeroTier 自动化配置
+ZT_NET_ID="41207907b477904b"
 while uci -q delete zerotier.@zerotier[0]; do :; done
 uci set zerotier.default_setup=zerotier
 uci set zerotier.default_setup.enabled='1'
 uci add_list zerotier.default_setup.join="$ZT_NET_ID"
-uci set zerotier.default_setup.secret='generate'  # 核心：每次都生成全新独立身份证
+uci set zerotier.default_setup.secret='generate'
 uci commit zerotier
 
-# 设置 ZeroTier 开机自启并立刻启动
 /etc/init.d/zerotier enable
 /etc/init.d/zerotier start
 
-# ================= (3) 统一 WiFi 配置 =================
+# 等待 15 秒挂载搬瓦工 Moon 卫星加速 (ID: 41207907b4)
+(
+    sleep 15
+    zerotier-cli orbit 41207907b4 41207907b4
+) &
+
+# (3) 统一 WiFi 名字与密码 (SSID: Ecom-WiFi-Pro)
 sleep 3
 if [ -f /etc/config/wireless ]; then
     for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
-        uci set wireless.${iface}.ssid='mywifi'
+        uci set wireless.${iface}.ssid='Ecom-WiFi-Pro'
         uci set wireless.${iface}.encryption='psk2'
         uci set wireless.${iface}.key='password'
     done
@@ -61,9 +79,8 @@ if [ -f /etc/config/wireless ]; then
     wifi reload
 fi
 
-# ================= (4) 阅后即焚 =================
 rm -f /etc/uci-defaults/999-custom-settings
 exit 0
 EOF
 
-echo "✅ 前置环境准备完毕！"
+echo "✅ 7986 终极优化版注入完毕！"
