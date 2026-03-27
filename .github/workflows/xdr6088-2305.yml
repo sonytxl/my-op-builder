@@ -70,12 +70,12 @@ jobs:
           
       - name: 7. ✨ Generate the ULTIMATE .config file
         run: |
-          [ -f ./diy-mtk-2305.sh ] && chmod +x ./diy-mtk-2305.sh
+          [ -f ./diy-backup.sh ] && chmod +x ./diy-backup.sh
           cd immortalwrt
           
           cp ../$CONFIG_NAME .config
           
-          [ -f ../diy-mtk-2305.sh ] && ../diy-mtk-2305.sh
+          [ -f ../diy-backup.sh ] && ../diy-backup.sh
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
