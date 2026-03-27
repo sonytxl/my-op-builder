@@ -6,7 +6,7 @@ echo "🔧 正在修改默认 IP 地址为 192.168.51.1..."
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 
 # 2. 修改默认主机名
-echo "🏷️ 正在修改默认主机名为 Ecom-7986-Pro..."
+echo "🏷️ 正在修改默认主机名为 Ecom-Gateway..."
 sed -i 's/ImmortalWrt/Ecom-7986-Pro/g' package/base-files/files/bin/config_generate
 
 # 3. 注入 SSR-Plus 源码
