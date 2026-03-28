@@ -73,12 +73,11 @@ jobs:
           
       - name: 7. ✨ Generate the ULTIMATE .config file
         run: |
-          [ -f ./diy-mtk-2305.sh ] && chmod +x ./diy-mtk-2305.sh
           cd immortalwrt
-          
           cp ../$CONFIG_NAME .config
           
-          [ -f ../diy-mtk-2305.sh ] && ../diy-mtk-2305.sh
+          # 🚀 终极防弹执行法：强制调用 bash 解释器，彻底无视 Windows/网页端带来的权限丢失问题！
+          [ -f ../diy-mtk-2305.sh ] && bash ../diy-mtk-2305.sh
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
