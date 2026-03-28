@@ -6,7 +6,7 @@ sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_genera
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 
 # 2. 修改默认主机名
-sed -i 's/ImmortalWrt/Ecom-7981/g' package/base-files/files/bin/config_generate
+sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
 
 # ==================== ☢️ 核心换源破局 ☢️ ====================
 # 3. 放弃老旧的 fw876，拉取 sbwml 的 v5 稳定版！
