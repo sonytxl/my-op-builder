@@ -1,81 +1,157 @@
-#!/bin/bash
-BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
-echo "🚀 开始执行 MTK 7981 终极量产白金版 (sbwml 稳定版) - 当前北京时间: $BJ_TIME"
+name: Build ImmortalWrt for MT7981 (23.05 Stable Edition)
 
-# 1. 修改默认 IP 与主机名
-sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
-sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
-sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
+on:
+  workflow_dispatch:
 
-# ==================== ☢️ 核心换源破局 (终极核打击) ☢️ ====================
-echo "🧹 执行 sbwml 官方推荐的终极清理大法：全盘搜索并彻底摧毁冲突的 Makefile！"
-# 只有这样才能彻底斩断官方 feeds 里错综复杂的旧依赖连结，防止“走错门一秒暴毙”
-find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
-find ./ | grep Makefile | grep mosdns | xargs rm -f
-find ./ | grep Makefile | grep v2dat | xargs rm -f
-find ./ | grep Makefile | grep sing-box | xargs rm -f
-find ./ | grep Makefile | grep xray-core | xargs rm -f
+permissions:
+  contents: write
 
-echo "📦 正在拉取 sbwml 极稳版全家桶..."
-# (1) 核心代理组件
-rm -rf package/helloworld
-git clone --depth=1 -b v5 https://github.com/sbwml/openwrt_helloworld package/helloworld
+env:
+  OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
+  OPENWRT_BRANCH: "openwrt-23.05" 
+  CONFIG_NAME: mt7981-2305.config
+  FIRMWARE_NAME: immortalwrt-mt7981-2305
 
-# (2) MosDNS 和 v2dat
-git clone --depth=1 -b v5 https://github.com/sbwml/luci-app-mosdns package/mosdns
+jobs:
+  build:
+    runs-on: ubuntu-22.04
 
-# (3) v2ray-geodata
-git clone --depth=1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
+    steps:
+      - name: 1. Checkout
+        uses: actions/checkout@v4
 
-# ==================== ⚙️ 核心编译器升级 ⚙️ ====================
-echo "🔄 正在替换底层 Go 编译器版本为 1.23 (sbwml 强制要求)..."
-rm -rf feeds/packages/lang/golang
-git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
+      - name: 2. Free Disk Space, Init Env, Create 10G Swap & Pre-install Rust
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          # 1. 强力清理 C 盘 (根目录) 给 OpenWrt 源码腾空间
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/swift /usr/local/lib/node_modules
+          
+          # 2. 🚀 终极破局大招：利用 GitHub 隐藏的 /mnt 盘创建 10GB Swap！
+          sudo fallocate -l 10G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          
+          # 3. ⚡ 提前给宿主机安装最新版官方 Rust，预防 shadowsocks-rust 编译报错
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustc --version
+          
+          # 4. 安装编译依赖 (已补全 ccache)
+          sudo -E apt-get update
+          sudo -E apt-get install -y ccache ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
-# ==================== 防爆内存补丁 ====================
-echo "🛡️ 注入防爆内存与全局缓存..."
-echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
-echo "CONFIG_CCACHE=y" >> .config
+      - name: 3. Clone Correct OpenWrt source code
+        run: |
+          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-# ==================== 自动化量产注入 ====================
-echo "📜 正在注入开机自动配置脚本 (ZeroTier + Moon + WiFi + 密码)..."
-mkdir -p package/base-files/files/etc/uci-defaults
-cat << "EOF" > package/base-files/files/etc/uci-defaults/999-custom-settings
-#!/bin/sh
-sed -i 's/^\(root:\)[^:]*:/\1$1$V4UetPzk$CYXluq41wU.F4HnvQ.6hX.:/' /etc/shadow
+      - name: 4. Cache Downloaded Packages (dl)
+        uses: actions/cache@v4
+        with:
+          path: immortalwrt/dl
+          # 修复：去掉每次都变的 run_id，改用稳定 hash，防止缓存无限增长撑爆 10G 限制
+          key: ${{ runner.os }}-openwrt-dl-${{ hashFiles('**/feeds.conf.default') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-dl-
 
-ZT_NET_ID="41207907b477904b"
-while uci -q delete zerotier.@zerotier[0]; do :; done
-uci set zerotier.default_setup=zerotier
-uci set zerotier.default_setup.enabled='1'
-uci add_list zerotier.default_setup.join="$ZT_NET_ID"
-uci set zerotier.default_setup.secret='generate'
-uci commit zerotier
+      - name: 5. Cache Ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-openwrt-ccache-${{ hashFiles('**/feeds.conf.default') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-ccache-
 
-/etc/init.d/zerotier enable
-/etc/init.d/zerotier start
+      - name: 6. Load Feeds configurations
+        run: |
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+      - name: 7. ✨ Generate the ULTIMATE .config file
+        run: |
+          cd immortalwrt
+          cp ../$CONFIG_NAME .config
+          
+          # 1. 🚀 终极防弹执行法：强制调用 bash 解释器，彻底无视 Windows/网页端带来的权限丢失问题！
+          [ -f ../diy-mtk-2305.sh ] && bash ../diy-mtk-2305.sh
+          
+          # 2. ⚡ 终极洗脑大招：干掉幽灵缓存，强制系统重新认识 Go 1.23 和新版组件！⚡
+          echo "🧹 正在清除系统旧缓存并重新挂载插件索引..."
+          rm -rf tmp/
+          ./scripts/feeds install -a
+          
+          # 3. 重新生成完美的配置
+          make defconfig
+          cp .config ../$CONFIG_NAME-build
 
-(
-    sleep 15
-    zerotier-cli orbit 41207907b4 41207907b4
-) &
+      - name: 8. Download packages
+        run: |
+          cd immortalwrt
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-sleep 3
-if [ -f /etc/config/wireless ]; then
-    for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
-        uci set wireless.${iface}.ssid='Ecom-WiFi'
-        uci set wireless.${iface}.encryption='psk2'
-        uci set wireless.${iface}.key='password'
-    done
-    for radio in $(uci show wireless | grep "=wifi-device" | cut -d'.' -f2 | cut -d'=' -f1); do
-        uci set wireless.${radio}.disabled='0'
-    done
-    uci commit wireless
-    wifi reload
-fi
+      - name: 9. Compile the firmware
+        id: compile
+        run: |
+          cd immortalwrt
+          echo -e "$(nproc) thread compile"
+          # 修复了极其致命的 Bug：去掉了必死的 exit 1，让单线程成功后能继续打包固件！
+          make -j$(nproc) || {
+            echo "多线程编译出错，正在切换到极其安全的单线程模式重新编译（时间较长，请绝对不要取消）..."
+            make -j1 V=s 2>&1 | tee compile_error.log || {
+              echo "单线程编译也彻底失败了！"
+              exit 1
+            }
+          }
 
-rm -f /etc/uci-defaults/999-custom-settings
-exit 0
-EOF
-
-echo "✅ 7981 终极量产环境注入完毕！"
+      - name: 10. Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_compile_error_log
+          path: immortalwrt/compile_error.log
+          
+      - name: 11. Package firmware
+        if: success()
+        run: |
+          cd immortalwrt/bin/targets/mediatek/mt7981
+          rm -rf packages
+          FIRMWARE_DATE=$(date +%Y-%m-%d)
+          mkdir -p firmware_release
+          
+          # 通杀 .bin, .img, .itb 所有可能的固件格式
+          find . -type f \( -name "*.bin" -o -name "*.img" -o -name "*.itb" \) -exec mv {} ./firmware_release/ \;
+          cd firmware_release
+          for f in *; do mv "$f" "mt7981-23.05-${FIRMWARE_DATE}-${f}"; done
+          
+      - name: 12. Generate release tag
+        if: success()
+        run: |
+          echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_date=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
+          
+      - name: 13. Upload firmware to Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: ${{ env.release_tag }}
+          name: 🚀 MT7981 (3合1) 稳定版 23.05 (${{ env.release_date }})
+          files: immortalwrt/bin/targets/mediatek/mt7981/firmware_release/*
+          body: |
+            ## 🚀 MT7981 黄金稳定版
+            - 🚀 **核心优势**: 内核 5.15极简对运存友好 + 联发科官方闭源 Wi-Fi 加速+MediaTek HNAT
+            - 🚀 **源码分支**: `openwrt-23.05` (内核 5.15，低运存占用)
+            - 🚀 **包含设备**: CMCC RAX3000M, JCG Q30, 360T7
+            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sbwml 魔改极稳内核)
+            - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
+            - 🌍 **异地组网**: WireGuard, ZeroTier
+            
+            ⚙️ **系统默认信息**:
+            - 默认 IP: `192.168.51.1`
+            - 默认密码: `password`
+            - 统一 WiFi: `Ecom-WiFi` (密码: password)
+            - 编译时间: ${{ env.release_date }}
