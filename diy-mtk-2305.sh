@@ -13,11 +13,14 @@ echo "📦 正在拉取 sbwml 终极稳定版源码..."
 rm -rf package/helloworld
 git clone --depth=1 -b v5 https://github.com/sbwml/openwrt_helloworld package/helloworld
 
-echo "🧹 正在清理官方毒瘤组件..."
+echo "🧹 正在清理官方毒瘤组件 (补全 mosdns)..."
 rm -rf feeds/packages/net/xray-core
 rm -rf feeds/packages/net/sing-box
 rm -rf feeds/packages/net/v2ray-core
 rm -rf feeds/packages/net/v2ray-geodata
+# ⚠️ 新增：干掉官方不兼容 Go 1.23 的旧版 mosdns，强制使用 sbwml 版
+rm -rf feeds/packages/net/mosdns
+rm -rf feeds/packages/net/v2dat
 
 # ==================== ⚙️ 核心编译器升级 (破局关键) ⚙️ ====================
 echo "🔄 正在替换底层 Go 编译器版本为 1.23 (sbwml 强制要求)..."
@@ -77,4 +80,4 @@ rm -f /etc/uci-defaults/999-custom-settings
 exit 0
 EOF
 
-echo "✅ 7981 终极量产环境 (包含 Go 1.23 编译器) 注入完毕！"
+echo "✅ 7981 终极量产环境 (包含 Go 1.23 + 完美修复的 mosdns) 注入完毕！"
