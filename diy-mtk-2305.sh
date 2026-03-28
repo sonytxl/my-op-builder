@@ -1,5 +1,7 @@
 #!/bin/bash
-echo "🚀 开始执行 MTK 7981 终极量产白金版 (sbwml 核弹级稳定版)..."
+# 自动获取北京时间，防止脚本版本混淆
+BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
+echo "🚀 开始执行 MTK 7981 终极量产白金版 (sbwml 稳定版) - 当前北京时间: $BJ_TIME"
 
 # 1. 修改默认 IP
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
@@ -18,22 +20,19 @@ rm -rf feeds/packages/net/xray-core
 rm -rf feeds/packages/net/sing-box
 rm -rf feeds/packages/net/v2ray-core
 rm -rf feeds/packages/net/v2ray-geodata
-# ⚠️ 新增：干掉官方不兼容 Go 1.23 的旧版 mosdns，强制使用 sbwml 版
 rm -rf feeds/packages/net/mosdns
 rm -rf feeds/packages/net/v2dat
 
-# ==================== ⚙️ 核心编译器升级 (破局关键) ⚙️ ====================
+# ==================== ⚙️ 核心编译器升级 ⚙️ ====================
 echo "🔄 正在替换底层 Go 编译器版本为 1.23 (sbwml 强制要求)..."
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
 
-# ==================== 防爆内存与网络提速补丁 ====================
-echo "🛡️ 注入防爆内存与网络提速补丁..."
+# ==================== 防爆内存补丁 ====================
+echo "🛡️ 注入防爆内存与全局缓存..."
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
-
-# 强制 Go 语言换源（防止拉取依赖超时）
-sed -i 's/https:\/\/proxy.golang.org/https:\/\/goproxy.cn,direct/g' feeds/packages/lang/golang/golang-package.mk || true
+# ⚠️ 极其关键：已经删除了导致美国服务器断流的国内 goproxy 代理代码！
 
 # ==================== 自动化量产注入 ====================
 echo "📜 正在注入开机自动配置脚本 (ZeroTier + Moon + WiFi + 密码)..."
@@ -80,4 +79,4 @@ rm -f /etc/uci-defaults/999-custom-settings
 exit 0
 EOF
 
-echo "✅ 7981 终极量产环境 (包含 Go 1.23 + 完美修复的 mosdns) 注入完毕！"
+echo "✅ 7981 终极量产环境注入完毕！"
