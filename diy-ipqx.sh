@@ -4,11 +4,14 @@ echo "🚀 开始执行 JDCloud AX1800 Pro 终极量产编译前置任务..."
 # 1. 修改默认 IP
 sed -i 's/192.168.1.1/192.168.61.1/g' package/base-files/files/bin/config_generate
 
-# 2. 核心大招：拉取 SSR-Plus 源码供 .config 读取！
+# 2. 修改默认主机名
+sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
+
+# 3. 核心大招：拉取 SSR-Plus 源码供 .config 读取！
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
 git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
-# 3. 物理清除 SSR-Plus 中极易报错的 Rust/高耗时组件
+# 4. 物理清除 SSR-Plus 中极易报错的 Rust/高耗时组件
 echo "🧹 物理清除容易报错的组件..."
 rm -rf package/helloworld/shadowsocks-rust
 rm -rf package/helloworld/tuic-client
@@ -16,15 +19,15 @@ rm -rf package/helloworld/hysteria
 rm -rf package/helloworld/trojan
 rm -rf package/helloworld/naiveproxy
 
-# 4. 加入预编译 Rust 保底防线
+# 5. 加入预编译 Rust 保底防线
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 
-# 5. 开启全局编译缓存 (高通提速核心！)
+# 6. 开启全局编译缓存 (高通提速核心！)
 echo "📦 正在开启高通全局 Ccache 编译缓存..."
 echo "CONFIG_DEVEL=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
-# 6. 注入开机自动配置脚本 (后台密码 + ZeroTier + WiFi 统一)
+# 7. 注入开机自动配置脚本 (后台密码 + ZeroTier + WiFi 统一)
 echo "📜 正在注入开机自动配置脚本..."
 mkdir -p package/base-files/files/etc/uci-defaults
 cat << "EOF" > package/base-files/files/etc/uci-defaults/999-custom-settings
