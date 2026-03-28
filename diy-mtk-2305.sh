@@ -7,24 +7,24 @@ sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_genera
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
 
-# ==================== ☢️ 核心换源破局 (填平所有依赖黑洞) ☢️ ====================
-echo "🧹 清理官方旧毒瘤组件..."
-rm -rf feeds/packages/net/xray-core
-rm -rf feeds/packages/net/sing-box
-rm -rf feeds/packages/net/v2ray-core
-rm -rf feeds/packages/net/v2ray-geodata
-rm -rf feeds/packages/net/mosdns
-rm -rf feeds/packages/net/v2dat
+# ==================== ☢️ 核心换源破局 (终极核打击) ☢️ ====================
+echo "🧹 执行 sbwml 官方推荐的终极清理大法：全盘搜索并彻底摧毁冲突的 Makefile！"
+# 只有这样才能彻底斩断官方 feeds 里错综复杂的旧依赖连结，防止“走错门一秒暴毙”
+find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+find ./ | grep Makefile | grep mosdns | xargs rm -f
+find ./ | grep Makefile | grep v2dat | xargs rm -f
+find ./ | grep Makefile | grep sing-box | xargs rm -f
+find ./ | grep Makefile | grep xray-core | xargs rm -f
 
-echo "📦 正在拉取 sbwml 极稳版全家桶 (补齐所有的依赖空洞)..."
-# (1) 核心代理组件 (xray-core, sing-box, ssr-plus等)
+echo "📦 正在拉取 sbwml 极稳版全家桶..."
+# (1) 核心代理组件
 rm -rf package/helloworld
 git clone --depth=1 -b v5 https://github.com/sbwml/openwrt_helloworld package/helloworld
 
-# (2) ⚠️ 救命稻草 1：完美适配的 MosDNS 和 v2dat
+# (2) MosDNS 和 v2dat
 git clone --depth=1 -b v5 https://github.com/sbwml/luci-app-mosdns package/mosdns
 
-# (3) ⚠️ 救命稻草 2：完美适配的 v2ray-geodata (xray-core 强依赖此项，缺少会一秒暴毙！)
+# (3) v2ray-geodata
 git clone --depth=1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 
 # ==================== ⚙️ 核心编译器升级 ⚙️ ====================
