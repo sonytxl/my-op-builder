@@ -24,23 +24,19 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # 1. 强力清理 C 盘 (根目录) 给 OpenWrt 源码腾空间
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/swift /usr/local/lib/node_modules
           
-          # 2. 🚀 终极破局大招：利用 GitHub 隐藏的 /mnt 盘创建 10GB Swap！
           sudo fallocate -l 10G /mnt/swapfile
           sudo chmod 600 /mnt/swapfile
           sudo mkswap /mnt/swapfile
           sudo swapon /mnt/swapfile
           
-          # 3. ⚡ 提前给宿主机安装最新版官方 Rust，预防 shadowsocks-rust 编译报错
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           export PATH="$HOME/.cargo/bin:$PATH"
           rustc --version
           
-          # 4. 安装编译依赖 (已补全 ccache)
           sudo -E apt-get update
           sudo -E apt-get install -y ccache ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
@@ -52,7 +48,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: immortalwrt/dl
-          # 修复：去掉每次都变的 run_id，改用稳定 hash，防止缓存无限增长撑爆 10G 限制
           key: ${{ runner.os }}-openwrt-dl-${{ hashFiles('**/feeds.conf.default') }}
           restore-keys: |
             ${{ runner.os }}-openwrt-dl-
@@ -76,15 +71,12 @@ jobs:
           cd immortalwrt
           cp ../$CONFIG_NAME .config
           
-          # 1. 🚀 终极防弹执行法：强制调用 bash 解释器，彻底无视 Windows/网页端带来的权限丢失问题！
           [ -f ../diy-mtk-2305.sh ] && bash ../diy-mtk-2305.sh
           
-          # 2. ⚡ 终极洗脑大招：干掉幽灵缓存，强制系统重新认识 Go 1.23 和新版组件！⚡
-          echo "🧹 正在清除系统旧缓存并重新挂载插件索引..."
+          echo "🧹 清除系统旧缓存，强制系统重新挂载健康的原生索引..."
           rm -rf tmp/
           ./scripts/feeds install -a
           
-          # 3. 重新生成完美的配置
           make defconfig
           cp .config ../$CONFIG_NAME-build
 
@@ -99,9 +91,8 @@ jobs:
         run: |
           cd immortalwrt
           echo -e "$(nproc) thread compile"
-          # 修复了极其致命的 Bug：去掉了必死的 exit 1，让单线程成功后能继续打包固件！
           make -j$(nproc) || {
-            echo "多线程编译出错，正在切换到极其安全的单线程模式重新编译（时间较长，请绝对不要取消）..."
+            echo "多线程编译出错，切换至单线程模式重试..."
             make -j1 V=s 2>&1 | tee compile_error.log || {
               echo "单线程编译也彻底失败了！"
               exit 1
@@ -123,7 +114,6 @@ jobs:
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           mkdir -p firmware_release
           
-          # 通杀 .bin, .img, .itb 所有可能的固件格式
           find . -type f \( -name "*.bin" -o -name "*.img" -o -name "*.itb" \) -exec mv {} ./firmware_release/ \;
           cd firmware_release
           for f in *; do mv "$f" "mt7981-23.05-${FIRMWARE_DATE}-${f}"; done
@@ -143,15 +133,13 @@ jobs:
           files: immortalwrt/bin/targets/mediatek/mt7981/firmware_release/*
           body: |
             ## 🚀 MT7981 黄金稳定版
-            - 🚀 **核心优势**: 内核 5.15极简对运存友好 + 联发科官方闭源 Wi-Fi 加速+MediaTek HNAT
-            - 🚀 **源码分支**: `openwrt-23.05` (内核 5.15，低运存占用)
-            - 🚀 **包含设备**: CMCC RAX3000M, JCG Q30, 360T7
-            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sbwml 魔改极稳内核)
-            - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
+            - 🚀 **核心优势**: 内核 5.15极简 + 联发科官方闭源 Wi-Fi 加速
+            - ✈️ **科学双擎**: SSR-Plus (原生健康引擎), HomeProxy
+            - 🛡️ **内网穿透**: Cloudflare Zero Trust
             - 🌍 **异地组网**: WireGuard, ZeroTier
             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
-            - 默认密码: `password`
-            - 统一 WiFi: `Ecom-WiFi` (密码: password)
-            - 编译时间: ${{ env.release_date }}
+            - 密码: `password`
+            - WiFi: `Ecom-WiFi`
+            
