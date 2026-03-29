@@ -55,7 +55,8 @@ jobs:
       - name: 5. Cache Ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          # 🚨 终极修复：把 ~/.ccache 改为 immortalwrt/.ccache，精准捕获编译碎片！
+          path: immortalwrt/.ccache
           key: ${{ runner.os }}-openwrt-ccache-${{ hashFiles('**/feeds.conf.default') }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-
@@ -84,7 +85,6 @@ jobs:
         run: |
           cd immortalwrt
           make download -j8
-          # 🚨 已经删除了极其危险的 find ... rm -f 代码，保护 Rust 依赖包的完整性！
 
       - name: 9. Compile the firmware
         id: compile
@@ -142,4 +142,3 @@ jobs:
             - 默认 IP: `192.168.51.1`
             - 密码: `password`
             - WiFi: `Ecom-WiFi`
-            - 编译时间: ${{ env.release_date }}
