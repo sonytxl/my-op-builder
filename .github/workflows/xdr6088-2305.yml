@@ -48,19 +48,20 @@ jobs:
         uses: actions/cache@v4
         with:
           path: immortalwrt/dl
-          # 保持这个前缀，让 6088 能完美白嫖 7981 下载好的源码包
-          key: ${{ runner.os }}-openwrt-dl-${{ github.run_id }}
+          # 🚨 修复：放弃 run_id，改用稳定 hash。
+          key: ${{ runner.os }}-openwrt-dl-mt7986-${{ hashFiles('**/feeds.conf.default') }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-dl-
+            ${{ runner.os }}-openwrt-dl-mt7986-
+            ${{ runner.os }}-openwrt-dl-   # 💡 魔法操作：如果找不到 6088 的下载库，就去白嫖 7981 的库！
 
       - name: 5. Cache Ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
-          # 更改前缀为 mt7986，防止和 7981 的编译缓存串味报错
-          key: ${{ runner.os }}-openwrt-mt7986-ccache-${{ github.run_id }}
+          # 🚨 终极修复：必须指向 immortalwrt 内部的 .ccache！
+          path: immortalwrt/.ccache
+          key: ${{ runner.os }}-openwrt-ccache-mt7986-${{ hashFiles('**/feeds.conf.default') }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-mt7986-ccache-
+            ${{ runner.os }}-openwrt-ccache-mt7986-
 
       - name: 6. Load Feeds configurations
         run: |
@@ -75,7 +76,13 @@ jobs:
           
           cp ../$CONFIG_NAME .config
           
+          # 执行自定义脚本
           [ -f ../diy-backup.sh ] && ../diy-backup.sh
+          
+          # 清理旧缓存挂载，确保索引健康
+          echo "🧹 清除系统旧缓存，强制系统重新挂载健康的原生索引..."
+          rm -rf tmp/
+          ./scripts/feeds install -a
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
@@ -84,7 +91,7 @@ jobs:
         run: |
           cd immortalwrt
           make download -j8
-          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
+          # 🚨 极其危险的 find rm 语句已彻底删除，保卫 Rust 依赖！
 
       - name: 9. Compile the firmware
         id: compile
@@ -92,9 +99,11 @@ jobs:
           cd immortalwrt
           echo -e "$(nproc) thread compile"
           make -j$(nproc) || {
-            echo "多线程编译失败，正在使用单线程生成详细日志..."
-            make -j1 V=s 2>&1 | tee compile_error.log
-            exit 1
+            echo "多线程编译出错，切换至单线程模式重试..."
+            make -j1 V=s 2>&1 | tee compile_error.log || {
+              echo "单线程编译也彻底失败了！"
+              exit 1
+            }
           }
 
       - name: 10. Upload build logs on failure
@@ -107,7 +116,6 @@ jobs:
       - name: 11. Package firmware
         if: success()
         run: |
-          # 路径已适配 MT7986 架构
           cd immortalwrt/bin/targets/mediatek/mt7986
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
@@ -129,18 +137,15 @@ jobs:
         with:
           tag_name: ${{ env.release_tag }}
           name: 🚀 TP-Link XDR6088 稳定版 23.05 (${{ env.release_date }})
-          # 路径已适配 MT7986 架构
           files: immortalwrt/bin/targets/mediatek/mt7986/firmware_release/*
           body: |
-            ## 🚀 TP-Link XDR6088 (MT7986) 黄金稳定版
-            - 🚀 **核心优势**: 内核 5.15极简对运存友好 + 联发科官方闭源 Wi-Fi 加速+MediaTek HNAT
-            - 🚀 **源码分支**: `openwrt-23.05` (内核 5.15)
-            - 🚀 **目标设备**: TP-Link TL-XDR6088 (双 2.5G 网口旗舰)
-            - ✈️ **科学双擎**: HomeProxy (sing-box 内核)
+            ## 🚀 TP-Link XDR6088 (MT7986) 极简办公版
+            - 🚀 **核心优势**: 内核 5.15极简对运存友好 + 联发科官方闭源 Wi-Fi 加速
+            - 🚀 **源码分支**: `openwrt-23.05` 
+            - ✈️ **科学单擎**: HomeProxy (Sing-box 内核，极致性能)
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🌍 **异地组网**: WireGuard, ZeroTier
             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
-            - 默认密码: `无`
-            - 编译时间: ${{ env.release_date }}
+            - 默认密码: `无` (请登录后立即设置)
