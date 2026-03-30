@@ -10,6 +10,11 @@ sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_genera
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
 git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
+# 拉取 MosDNS V5 的专用 UI 壳子及其依赖
+echo "📦 正在拉取 MosDNS V5 UI 壳子..."
+git clone --depth=1 https://github.com/sbwml/luci-app-mosdns package/luci-app-mosdns
+git clone --depth=1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata-sbwml
+
 # 3. 物理清除 SSR-Plus 中易报错的 Rust/Go 组件及冲突包
 echo "🧹 物理清除容易报错的组件..."
 rm -rf package/helloworld/shadowsocks-rust
