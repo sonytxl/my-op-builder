@@ -27,8 +27,8 @@ rm -rf package/helloworld/v2ray-geodata
 # 5. 加入预编译 Rust 保底防线
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 
-# 6. 开启全局编译缓存 (极其重要！)
-echo "📦 正在开启全局 Ccache 编译缓存..."
+# 3. 注入防爆内存编译参数
+echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
 # 7. WiFi 配置使用 uci-defaults 动态注入 (因涉及硬件底层识别)
