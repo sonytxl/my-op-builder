@@ -5,7 +5,8 @@ echo "🚀 开始执行 JDCloud AX1800 Pro 终极量产编译前置任务..."
 sed -i 's/192.168.1.1/192.168.61.1/g' package/base-files/files/bin/config_generate
 
 # 2. 修改默认主机名
-sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
+# 暴力正则替换，无视原有名字是什么
+sed -i "s/hostname='.*'/hostname='Ecom-Gateway'/g" package/base-files/files/bin/config_generate
 
 # 3. 核心大招：拉取 SSR-Plus 源码供 .config 读取！
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
