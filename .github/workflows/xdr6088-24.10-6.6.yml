@@ -144,7 +144,7 @@ jobs:
             - 完美支持：`TP-Link TL-XDR6088` (128M 大分区版)
             
             📦 **核心功能与插件**:
-            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
+            - ✈️ **科学双擎**: SSR-Plus (xray 内核), HomeProxy (sing-box 内核)
             - 🌍 **异地组网**: WireGuard, ZeroTier
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🗄️ **轻量 NAS**: Samba4
