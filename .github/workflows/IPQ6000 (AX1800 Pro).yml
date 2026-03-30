@@ -128,7 +128,7 @@ jobs:
             - 自动重启，终端，ddns，upnp
             
             🧩 **包含核心插件**:
-            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
+            - ✈️ **科学双擎**: SSR-Plus (xray 内核), HomeProxy (sing-box 内核)
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🌍 **异地组网**: WireGuard, ZeroTier
             - 🗄️ **轻量 NAS**: Samba4
