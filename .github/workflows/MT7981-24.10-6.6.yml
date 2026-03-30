@@ -47,17 +47,23 @@ jobs:
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
-      - name: 4. Clone OpenWrt source code
-        run: |
-          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
+      - name: 4. Cache Downloaded Packages (dl)
+        uses: actions/cache@v4
+        with:
+          path: immortalwrt/dl
+          # 使用 hashFiles 锁定，彻底告别 run_id 带来的缓存失效
+          key: ${{ runner.os }}-openwrt-dl-mt7981-6.6-${{ hashFiles('**/feeds.conf.default') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-dl-mt7981-6.6-
+            ${{ runner.os }}-openwrt-dl-
 
-      - name: 5. Setup ccache (保卫 500MB 缓存)
+      - name: 5. Cache Ccache (保卫核心编译碎片)
         uses: actions/cache@v4
         with:
           path: immortalwrt/.ccache
-          key: ${{ runner.os }}-openwrt-mt7981-ccache-${{ github.run_id }}
+          key: ${{ runner.os }}-openwrt-ccache-mt7981-6.6-${{ hashFiles('**/feeds.conf.default') }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-mt7981-ccache-
+            ${{ runner.os }}-openwrt-ccache-mt7981-6.6-
 
       - name: 6. Load Feeds
         run: |
@@ -68,12 +74,10 @@ jobs:
       - name: 7. ✨ Generate the .config file
         run: |
           chmod +x ./diy-mtk-2410-6.6.sh
-
           cd immortalwrt
           
           cp ../$CONFIG_NAME .config
           ../diy-mtk-2410-6.6.sh
-
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
@@ -82,7 +86,7 @@ jobs:
         run: |
           cd immortalwrt
           make download -j8
-          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
+          # 🚨 危险的 find rm 语句已彻底删除，保卫 Rust 依赖！
 
       - name: 9. Compile the firmware
         id: compile
@@ -135,7 +139,7 @@ jobs:
             
             📦 **核心功能与插件**:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
-            - 🌍 **异地组网**: WireGuard, ZeroTier, **Tailscale (已集成原生 Web 界面)**
+            - 🌍 **异地组网**: WireGuard, ZeroTier
             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
