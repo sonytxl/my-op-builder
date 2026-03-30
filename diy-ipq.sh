@@ -28,25 +28,25 @@ echo "CONFIG_DEVEL=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
 
-#  设置所有 WiFi 频段名称为 mywifi，密码为 password
-# 等待系统自动生成默认 WiFi 配置文件后执行拦截修改
-sleep 3
+# 7. WiFi 配置使用 uci-defaults 动态注入 (因涉及硬件底层识别)
+mkdir -p package/base-files/files/etc/uci-defaults
+cat << "EOF" > package/base-files/files/etc/uci-defaults/99-custom-wifi
+#!/bin/sh
 if [ -f /etc/config/wireless ]; then
-    # 遍历并修改所有无线接口 (自动兼容 2.4G 和 5G)
     for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
-        uci set wireless.${iface}.ssid='mywifi'
+        uci set wireless.${iface}.ssid='Ecom-WiFi'
         uci set wireless.${iface}.encryption='psk2'
         uci set wireless.${iface}.key='password'
     done
-    
-    # 遍历并强制开启所有物理无线网卡
     for radio in $(uci show wireless | grep "=wifi-device" | cut -d'.' -f2 | cut -d'=' -f1); do
         uci set wireless.${radio}.disabled='0'
     done
-    
     uci commit wireless
     wifi reload
 fi
+rm -f /etc/uci-defaults/99-custom-wifi
+exit 0
+EOF
 
 
 
