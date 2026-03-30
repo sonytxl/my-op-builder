@@ -138,6 +138,9 @@ jobs:
             
             💡 **适配机型**:
             - 完美支持：`CMCC RAX3000M`、`CMCC XR30`、`JCG Q30 PRO`、`360T7` 等主流 MT7981 设备。
+
+            🚀 **基础功能**:
+            - 自动重启，终端，ddns，upnp
             
             📦 **核心功能与插件**:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
