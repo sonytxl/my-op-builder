@@ -23,7 +23,7 @@ jobs:
       - name: 1. Checkout
         uses: actions/checkout@v4
 
-      - name: 2. Free Disk Space, Init Env, Create 10G Swap & Pre-install Rust
+      - name: 2. Free Disk Space, Init Env & Pre-install Rust
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -46,10 +46,10 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. Setup ccache (彻底修复系统级路径)
+      - name: 4. ⚡ Setup OpenWrt Ccache (回归官方原生缓存路径)
         uses: actions/cache@v4
         with:
-          path: ${{ github.workspace }}/immortalwrt/.ccache
+          path: ~/.ccache
           key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq6000-ccache-
@@ -82,8 +82,7 @@ jobs:
         run: |
           cd immortalwrt
           echo -e "$(nproc) thread compile"
-          # ⚠️ 重新绑定 CCACHE_DIR，让编译器能找到缓存
-          export CCACHE_DIR=$GITHUB_WORKSPACE/immortalwrt/.ccache
+          # 移除了无效的 CCACHE_DIR 导出，让系统自动使用 ~/.ccache
           make -j$(nproc) || {
             echo "多线程编译失败，正在使用单线程生成详细日志..."
             make -j1 V=s 2>&1 | tee compile_error.log
@@ -135,6 +134,7 @@ jobs:
             - 🎨 **界面美化**: Argon 主题 + 完美中文支持
             
             ⚙️ **系统默认信息**:
-            - 默认 IP: `192.168.61.1`
-            - 默认密码: `无`
+            - 默认后台 IP: `192.168.61.1`
+            - 默认密码: `无` (请登录后自行设置)
+            - 默认 Wi-Fi 密码: `password`
             - 编译时间: ${{ env.release_date }}
