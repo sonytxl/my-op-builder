@@ -28,7 +28,6 @@ echo "CONFIG_DEVEL=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
 
-
 #  设置所有 WiFi 频段名称为 mywifi，密码为 password
 # 等待系统自动生成默认 WiFi 配置文件后执行拦截修改
 sleep 3
@@ -49,9 +48,6 @@ if [ -f /etc/config/wireless ]; then
     wifi reload
 fi
 
-# 脚本运行一次后自我删除，防止每次开机都重置
-rm -f /etc/uci-defaults/999-custom-settings
-exit 0
-EOF
+
 
 echo "✅ 高通前置环境准备完毕，完美底盘移交编译引擎！"
