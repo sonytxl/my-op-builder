@@ -63,10 +63,10 @@ jobs:
             ${{ runner.os }}-openwrt-dl-mt7981-6.6-
             ${{ runner.os }}-openwrt-dl-
 
-      - name: 6. ⚡ Cache Ccache (回归原生路径，避免失效)
+      - name: 6. ⚡ Cache Ccache (保卫核心编译碎片)
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          path: ${{ github.workspace }}/immortalwrt/.ccache
           key: ${{ runner.os }}-openwrt-ccache-mt7981-6.6-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-mt7981-6.6-
