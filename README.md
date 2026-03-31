@@ -23,4 +23,4 @@
             - 默认后台 IP: `192.168.61.1`
             - 默认密码: `无` (请登录后自行设置)
             - 默认 Wi-Fi:`Ecom-WiFi` 密码: `password`
-            - 编译时间: ${{ env.release_date }}
+           
