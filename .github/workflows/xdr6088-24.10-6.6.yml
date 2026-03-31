@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for XDR6088-24.10-6.6 (MT7986)
+name: Build OP for XDR6088-24.10-6.6 (MT7986)
 
 on:
   workflow_dispatch:
