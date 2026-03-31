@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for IPQ6000 (AX1800 Pro)
+name: Build OP for IPQ6000 (AX1800 Pro)
 
 on:
   workflow_dispatch:
