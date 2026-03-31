@@ -1,4 +1,4 @@
-name: Build OP for XDR6088(24.10-6.6) (MT7986)
+name: Build OP for MT7986(24.10-6.6) (XDR6088)
 
 on:
   workflow_dispatch:
