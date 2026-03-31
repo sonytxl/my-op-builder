@@ -112,14 +112,17 @@ jobs:
           name: MTK_compile_error_log
           path: immortalwrt/compile_error.log
           
-      - name: 12. Package firmware
+      - name: 12. Package firmware (🔥 针对 24.10-6.6 强化版本)
         if: success()
         run: |
           mkdir -p firmware_release
-          find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
+          # 核心捕获逻辑：同时抓取 bin, img, ubi, itb, fip 格式
+          find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" -o -name "*.itb" -o -name "*.fip" \) -exec cp {} ./firmware_release/ \;
           cd firmware_release
+          # 剔除掉那些带 'sha256' 字样的校验文件，只要干货固件
+          rm -f *sha256sum*
           FIRMWARE_DATE=$(date +%Y-%m-%d)
-          for f in *; do mv "$f" "MT7981-${FIRMWARE_DATE}-${f}"; done
+          for f in *; do mv "$f" "MT7981-6.6-${FIRMWARE_DATE}-${f}"; done
           
       - name: 13. Generate release tag
         if: success()
