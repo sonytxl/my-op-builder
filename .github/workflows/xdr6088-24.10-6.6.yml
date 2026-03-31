@@ -2,6 +2,9 @@ name: Build ImmortalWrt for XDR6088-24.10-6.6 (MT7986)
 
 on:
   workflow_dispatch:
+  schedule:
+    # 对应北京时间每月 2 号凌晨 00:00 (UTC 时间 1 号 16:00)
+    - cron: '0 16 1 * *'
 
 permissions:
   contents: write
@@ -51,21 +54,19 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 5. Cache Downloaded Packages (dl)
+      - name: 5. 📦 Cache Downloaded Packages (MT7986 专属 dl 缓存)
         uses: actions/cache@v4
         with:
           path: immortalwrt/dl
           key: ${{ runner.os }}-openwrt-dl-mt7986-6.6-${{ hashFiles('**/feeds.conf.default') }}
           restore-keys: |
             ${{ runner.os }}-openwrt-dl-mt7986-6.6-
-            ${{ runner.os }}-openwrt-dl-mt7981-6.6-
-            ${{ runner.os }}-openwrt-dl-
 
-      - name: 6. Setup ccache (保卫独立编译碎片)
+      - name: 6. ⚡ Setup ccache (保卫核心编译碎片)
         uses: actions/cache@v4
         with:
-          path: immortalwrt/.ccache
-          key: ${{ runner.os }}-openwrt-ccache-mt7986-6.6-${{ hashFiles('**/feeds.conf.default') }}
+          path: ${{ github.workspace }}/immortalwrt/.ccache
+          key: ${{ runner.os }}-openwrt-ccache-mt7986-6.6-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-mt7986-6.6-
 
@@ -90,6 +91,7 @@ jobs:
         run: |
           cd immortalwrt
           make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
       - name: 10. Compile the firmware
         id: compile
@@ -143,8 +145,8 @@ jobs:
             💡 **适配机型**:
             - 完美支持：`TP-Link TL-XDR6088` (128M 大分区版)
             
-            📦 **核心功能与插件**:
-            - ✈️ **科学双擎**: SSR-Plus (xray 内核), HomeProxy (sing-box 内核)
+            📦 **核心功能与插件 (告别历史包袱)**:
+            - ✈️ **科学双擎**: Passwall (Xray 内核), HomeProxy (sing-box 内核)
             - 🌍 **异地组网**: WireGuard, ZeroTier
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🗄️ **轻量 NAS**: Samba4
@@ -152,5 +154,5 @@ jobs:
             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
-            - 默认密码: `无` 
+            - 默认 Wi-Fi:`Ecom-WiFi` 密码: `password` 
             - 编译时间: ${{ env.release_date }}
