@@ -46,10 +46,10 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. ⚡ Setup OpenWrt Ccache (回归官方原生缓存路径)
+      - name: 4. ⚡ Setup OpenWrt Ccache (精准定位源码内置缓存)
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          path: ${{ github.workspace }}/immortalwrt/.ccache
           key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq6000-ccache-
