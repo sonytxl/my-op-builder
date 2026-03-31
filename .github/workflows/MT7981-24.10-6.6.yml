@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for MT7981 (24.10-6.6)
+name: Build OP for MT7981 (24.10-6.6)
 
 on:
   workflow_dispatch:
