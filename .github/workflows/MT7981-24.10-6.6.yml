@@ -2,6 +2,9 @@ name: Build ImmortalWrt for MT7981 (24.10-6.6)
 
 on:
   workflow_dispatch:
+  schedule:
+    # 每月 2 号自动编译
+    - cron: '0 16 1 * *'
 
 permissions:
   contents: write
@@ -30,7 +33,7 @@ jobs:
           large-packages: true
           swap-storage: true
 
-      - name: 3. Init Env, Create 10G Swap & Install Rust
+      - name: 3. Init Env, Create 10G Swap & Pre-install Rust
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -47,11 +50,11 @@ jobs:
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
-      - name: 4. Clone OpenWrt source code (🔥 刚才弄丢的步骤补回来了)
+      - name: 4. Clone OpenWrt source code
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 5. Cache Downloaded Packages (dl)
+      - name: 5. 📦 Cache Downloaded Packages (MTK 提速核心：保卫 dl 目录)
         uses: actions/cache@v4
         with:
           path: immortalwrt/dl
@@ -60,15 +63,15 @@ jobs:
             ${{ runner.os }}-openwrt-dl-mt7981-6.6-
             ${{ runner.os }}-openwrt-dl-
 
-      - name: 6. Cache Ccache (保卫核心编译碎片)
+      - name: 6. ⚡ Cache Ccache (回归原生路径，避免失效)
         uses: actions/cache@v4
         with:
-          path: immortalwrt/.ccache
-          key: ${{ runner.os }}-openwrt-ccache-mt7981-6.6-${{ hashFiles('**/feeds.conf.default') }}
+          path: ~/.ccache
+          key: ${{ runner.os }}-openwrt-ccache-mt7981-6.6-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-mt7981-6.6-
 
-      - name: 7. Load Feeds
+      - name: 7. Load Feeds configurations
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
@@ -89,6 +92,7 @@ jobs:
         run: |
           cd immortalwrt
           make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
       - name: 10. Compile the firmware
         id: compile
@@ -117,7 +121,7 @@ jobs:
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           for f in *; do mv "$f" "MT7981-${FIRMWARE_DATE}-${f}"; done
           
-      - name: 13. Generate release tag (注入北京时间)
+      - name: 13. Generate release tag
         if: success()
         run: |
           echo "release_tag=$(TZ='Asia/Shanghai' date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
@@ -128,10 +132,10 @@ jobs:
         if: success()
         with:
           tag_name: ${{ env.release_tag }}
-          name: 🚀 MTK 7981 满血版 6.6内核 (${{ env.release_date }})
+          name: "🚀 MTK 7981 满血双擎版 6.6内核 (${{ env.release_date }})"
           files: firmware_release/*
           body: |
-            ## 🚀 MTK 7981 专属固件 (Padavanonly 6.6分支)
+            ## 🚀 MTK 7981 纯净专属固件 (Padavanonly 6.6分支)
             - **源码仓库**: `padavanonly/immortalwrt-mt798x-6.6`
             - **分支版本**: `openwrt-24.10-6.6`
             - **核心优势**: Linux 6.6 现代内核 + 联发科官方闭源 Wi-Fi 加速
@@ -142,8 +146,8 @@ jobs:
             🚀 **基础功能**:
             - 自动重启，终端，ddns，upnp
             
-            📦 **核心功能与插件**:
-            - ✈️ **科学双擎**: SSR-Plus（xray 内核）, HomeProxy (sing-box 内核)
+            📦 **包含核心插件 (告别历史包袱)**:
+            - ✈️ **科学双擎**: Passwall (Xray内核), HomeProxy (Sing-box 内核)
             - 🌍 **异地组网**: WireGuard, ZeroTier
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🎨 **界面美化**: Argon 主题 + 完美中文支持
@@ -151,4 +155,5 @@ jobs:
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
             - 默认密码: `无`
+            - 默认 WiFi 密码: `password`
             - 编译时间: ${{ env.release_date }}
