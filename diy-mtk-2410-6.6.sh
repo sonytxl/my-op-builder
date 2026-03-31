@@ -1,52 +1,49 @@
 #!/bin/bash
-echo "🚀 开始执行 MTK 7981/7986 编译前置任务..."
+echo "🚀 开始执行 MTK 7981/7986 (24.10-6.6) 纯净量产版编译前置任务..."
 
-# 1. 修改默认 IP和主机名 (终极防漏杀：同时通杀官方 1.1 和 Padavanonly 的 6.1，目标改为 51.1)
+# 1. 修改默认 IP (通杀官方 1.1 和特定源码的 6.1，目标改为 51.1)
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
-sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
- 
-# 2. 拉取 SSR-Plus 源码
-echo "📦 正在拉取 luci-app-ssr-plus 源码..."
-git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
-# 拉取 MosDNS V5 的专用 UI 壳子及其依赖
-echo "📦 正在拉取 MosDNS V5 UI 壳子..."
-git clone --depth=1 https://github.com/sbwml/luci-app-mosdns package/luci-app-mosdns
-git clone --depth=1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata-sbwml
-
-# 3. 物理清除 SSR-Plus 中易报错的 Rust/Go 组件及冲突包
-echo "🧹 物理清除容易报错的组件..."
-rm -rf package/helloworld/shadowsocks-rust
-rm -rf package/helloworld/shadow-tls
-rm -rf package/helloworld/tuic-client
-rm -rf package/helloworld/hysteria
-rm -rf package/helloworld/trojan
-rm -rf package/helloworld/naiveproxy
-rm -rf package/helloworld/v2ray-geodata
-
-# 4. 注入防爆内存编译参数
+# 2. 防爆内存与全局提速编译参数
+echo "📦 注入防爆内存与 Ccache 全局编译缓存优化..."
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
+echo "CONFIG_DEVEL=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
-# 5. WiFi 配置使用 uci-defaults 动态注入 (因涉及硬件底层识别)
+# 3. 终极大招：用动态注入脚本一并接管 主机名、时区 和 WiFi
+echo "🛠️ 正在写入底层硬件配置脚本 (Hostname, Timezone, WiFi)..."
 mkdir -p package/base-files/files/etc/uci-defaults
-cat << "EOF" > package/base-files/files/etc/uci-defaults/99-custom-wifi
+
+# 写入合并版的 99-ecom-gateway-setup 脚本
+cat << "EOF" > package/base-files/files/etc/uci-defaults/99-ecom-gateway-setup
 #!/bin/sh
+
+# [A] 强行夺取主机名和时区控制权 (完美解决 6.6 内核下 sed 替换可能失效的问题)
+uci set system.@system[0].hostname='Ecom-Gateway'
+uci set system.@system[0].timezone='CST-8'
+uci set system.@system[0].zonename='Asia/Shanghai'
+uci commit system
+
+# [B] 动态接管并重写所有底层 WiFi 配置
 if [ -f /etc/config/wireless ]; then
+    # 修改 SSID 和密码
     for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
         uci set wireless.${iface}.ssid='Ecom-WiFi'
         uci set wireless.${iface}.encryption='psk2'
         uci set wireless.${iface}.key='password'
     done
+    # 激活所有被禁用的 WiFi 天线
     for radio in $(uci show wireless | grep "=wifi-device" | cut -d'.' -f2 | cut -d'=' -f1); do
         uci set wireless.${radio}.disabled='0'
     done
     uci commit wireless
     wifi reload
 fi
-rm -f /etc/uci-defaults/99-custom-wifi
+
+# [C] 功成身退，自杀销毁 (保证只在刚刷机开机时执行一次)
+rm -f /etc/uci-defaults/99-ecom-gateway-setup
 exit 0
 EOF
 
-echo "✅ 前置环境准备完毕，完美底盘即将移交编译引擎！"
+echo "✅ MTK 纯净底层环境准备完毕，完美对接官方 HomeProxy + Passwall 双引擎！"
