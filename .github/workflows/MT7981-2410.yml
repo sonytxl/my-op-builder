@@ -1,0 +1,167 @@
+name: Build OP for MT7981 (2410 Branch)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每月 2 号自动编译
+    - cron: '0 16 1 * *'
+
+permissions:
+  contents: write
+
+env:
+  OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
+  # 【修改 1】：精准锁定 2410 分支
+  OPENWRT_BRANCH: "2410" 
+  # 【修改 2】：换成你 2410 的 config 文件名
+  CONFIG_NAME: mt7981-2410.config
+  FIRMWARE_NAME: immortalwrt-mt7981-2410
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 1. Checkout
+        uses: actions/checkout@v4
+
+      - name: 2. Free Disk Space (极致清理)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - name: 3. Init Env, Create 10G Swap & Pre-install Rust
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo fallocate -l 10G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustc --version
+          
+          sudo rm -rf /etc/apt/sources.list.d/*
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
+
+      - name: 4. Clone OpenWrt source code
+        run: |
+          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
+
+      - name: 5. 📦 Cache Downloaded Packages (MTK 提速核心：保卫 dl 目录)
+        uses: actions/cache@v4
+        with:
+          path: immortalwrt/dl
+          # 【修改 3】：隔离 dl 缓存，防止和 6.6 冲突
+          key: ${{ runner.os }}-openwrt-dl-mt7981-2410-${{ hashFiles('**/feeds.conf.default') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-dl-mt7981-2410-
+            ${{ runner.os }}-openwrt-dl-
+
+      - name: 6. ⚡ Cache Ccache (保卫核心编译碎片)
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/immortalwrt/.ccache
+          # 【修改 4】：隔离 ccache 缓存，这是防报错的关键！
+          key: ${{ runner.os }}-openwrt-ccache-mt7981-2410-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-ccache-mt7981-2410-
+
+      - name: 7. Load Feeds configurations
+        run: |
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+      - name: 8. ✨ Generate the .config file
+        run: |
+          # 【修改 5】：换成你 2410 的 diy 脚本名
+          chmod +x ./diy-mtk-2410.sh
+          cd immortalwrt
+          
+          cp ../$CONFIG_NAME .config
+          ../diy-mtk-2410.sh
+          
+          make defconfig
+          cp .config ../$CONFIG_NAME-build
+
+      - name: 9. Download packages
+        run: |
+          cd immortalwrt
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
+
+      - name: 10. Compile the firmware
+        id: compile
+        run: |
+          cd immortalwrt
+          echo -e "$(nproc) thread compile"
+          make -j$(nproc) || {
+            echo "多线程编译失败，正在使用单线程生成详细日志..."
+            make -j1 V=s 2>&1 | tee compile_error.log
+            exit 1
+          }
+
+      - name: 11. Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MTK_compile_error_log
+          path: immortalwrt/compile_error.log
+          
+      - name: 12. Package firmware
+        if: success()
+        run: |
+          mkdir -p firmware_release
+          find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" -o -name "*.itb" -o -name "*.fip" \) -exec cp {} ./firmware_release/ \;
+          cd firmware_release
+          rm -f *sha256sum*
+          FIRMWARE_DATE=$(date +%Y-%m-%d)
+          # 【修改 6】：固件重命名加上 2410 标识
+          for f in *; do mv "$f" "MT7981-2410-${FIRMWARE_DATE}-${f}"; done
+          
+      - name: 13. Generate release tag
+        if: success()
+        run: |
+          echo "release_tag=$(TZ='Asia/Shanghai' date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_date=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M")" >> $GITHUB_ENV
+          
+      - name: 14. Upload firmware to Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: ${{ env.release_tag }}
+          # 【修改 7】：发布页标题修改
+          name: "🚀 MTK 7981 满血双擎版 2410分支 (${{ env.release_date }})"
+          files: firmware_release/*
+          body: |
+            ## 🚀 MTK 7981 纯净专属固件 (Padavanonly 2410分支)
+            - **源码仓库**: `padavanonly/immortalwrt-mt798x-6.6`
+            - **分支版本**: `2410` (完美适配 hanwckf U-Boot)
+            - **核心优势**: 稳定内核 + 联发科官方闭源 Wi-Fi 加速，含 `initramfs` 过渡包。
+            
+            💡 **适配机型**:
+            - 完美支持：`CMCC RAX3000M`、`CMCC XR30`、`JCG Q30 PRO`、`360T7` 等主流 MT7981 设备。
+
+            🚀 **基础功能**:
+            - 自动重启，终端，ddns，upnp
+            
+            📦 **包含核心插件**:
+            - ✈️ **科学双擎**: Passwall (Xray内核), HomeProxy (Sing-box 内核)
+            - 🌍 **异地组网**: WireGuard, ZeroTier
+            - 🛡️ **内存优化**: zRAM 内存压缩
+            - 🎨 **界面美化**: Argon 主题 + 完美中文支持
+            
+            ⚙️ **系统默认信息**:
+            - 默认 IP: `192.168.51.1`
+            - 默认密码: `无`
+            - 默认 Wi-Fi:`Ecom-WiFi` 密码: `password`
+            - 编译时间: ${{ env.release_date }}
