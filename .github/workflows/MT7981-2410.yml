@@ -99,14 +99,11 @@ jobs:
       - name: 9. Download packages
         run: |
           cd immortalwrt
-          
-          # 【新增核心修复2】：清除刚才下载失败导致的“残缺 Go 缓存”，防止缓存投毒
           rm -rf dl/go-mod-cache
-          
-          # 【新增核心修复3】：双重保险！多线程下载如果失败，立刻转单线程强制补齐
           make download -j8 || make download -j1 V=s
           
-          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
+          # 【史诗级修复】：加上 -maxdepth 1，只清理最外层的坏压缩包，严禁它进入子目录屠杀 Rust/Go 的合法微小文件！
+          find dl -maxdepth 1 -type f -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
       - name: 10. Compile the firmware
         id: compile
