@@ -83,9 +83,12 @@ jobs:
           
       - name: 8. ✨ Generate the .config file
         run: |
-          # 【修改 5】：换成你 2410 的 diy 脚本名
           chmod +x ./diy-mtk.sh
           cd immortalwrt
+          
+          # 【新增核心修复1】：把 Go 代理换回官方，防止 Github Actions 被国内镜像限流拦截
+          sed -i 's/goproxy.cn/proxy.golang.org/g' feeds/packages/lang/golang/golang-values.mk || true
+          sed -i 's/goproxy.io/proxy.golang.org/g' feeds/packages/lang/golang/golang-values.mk || true
           
           cp ../$CONFIG_NAME .config
           ../diy-mtk.sh
@@ -96,7 +99,13 @@ jobs:
       - name: 9. Download packages
         run: |
           cd immortalwrt
-          make download -j8
+          
+          # 【新增核心修复2】：清除刚才下载失败导致的“残缺 Go 缓存”，防止缓存投毒
+          rm -rf dl/go-mod-cache
+          
+          # 【新增核心修复3】：双重保险！多线程下载如果失败，立刻转单线程强制补齐
+          make download -j8 || make download -j1 V=s
+          
           find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
       - name: 10. Compile the firmware
