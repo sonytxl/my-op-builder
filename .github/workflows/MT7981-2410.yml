@@ -1,10 +1,10 @@
 name: Build OP for MT7981 (2410 Branch)
 
 on:
-  workflow_dispatch:
-  schedule:
+  # workflow_dispatch:
+  # schedule:
     # 每月 2 号自动编译
-    - cron: '0 16 1 * *'
+    # - cron: '0 16 1 * *'
 
 permissions:
   contents: write
