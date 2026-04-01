@@ -86,11 +86,15 @@ jobs:
           chmod +x ./diy-mtk.sh
           cd immortalwrt
           
-          # 【新增核心修复1】：把 Go 代理换回官方，防止 Github Actions 被国内镜像限流拦截
           sed -i 's/goproxy.cn/proxy.golang.org/g' feeds/packages/lang/golang/golang-values.mk || true
           sed -i 's/goproxy.io/proxy.golang.org/g' feeds/packages/lang/golang/golang-values.mk || true
           
           cp ../$CONFIG_NAME .config
+          
+          # 【新增绝杀指令】：物理超度 Rust！编译前强行把 SS-Rust 从配置单里抹除！
+          sed -i '/Shadowsocks_Rust/d' .config
+          sed -i '/shadowsocks-rust/d' .config
+          
           ../diy-mtk.sh
           
           make defconfig
