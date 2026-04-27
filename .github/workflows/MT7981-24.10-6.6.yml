@@ -83,7 +83,7 @@ jobs:
           cd immortalwrt
           
           cp ../$CONFIG_NAME .config
-          ../diy-mtk-2410.sh
+          ../diy-mtk.sh
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
