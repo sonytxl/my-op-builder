@@ -14,6 +14,8 @@ env:
   OPENWRT_BRANCH: "openwrt-24.10-6.6" 
   CONFIG_NAME: mt7981-24.10-6.6.config
   FIRMWARE_NAME: immortalwrt-mt7981-6.6
+  # 👇 官方消音大招：强制底层 Actions 使用 Node 24，干掉黄色警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -58,7 +60,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: immortalwrt/dl
-          key: ${{ runner.os }}-openwrt-dl-mt7981-6.6-${{ hashFiles('**/feeds.conf.default') }}
+          # 👇 核心修复点：将 `**` 改为 `immortalwrt`，取消全局盲搜，瞬间完成不超时！
+          key: ${{ runner.os }}-openwrt-dl-mt7981-6.6-${{ hashFiles('immortalwrt/feeds.conf.default') }}
           restore-keys: |
             ${{ runner.os }}-openwrt-dl-mt7981-6.6-
             ${{ runner.os }}-openwrt-dl-
