@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     # 对应北京时间每月 2 号凌晨 00:00 (UTC 时间 1 号 16:00)
-    # - cron: '0 16 1 * *'
+     - cron: '0 16 1 * *'
 
 permissions:
   contents: write
