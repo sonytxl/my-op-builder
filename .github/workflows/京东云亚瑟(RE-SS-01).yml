@@ -1,4 +1,4 @@
-name: Build OP for RE-SS-01 (京东云亚瑟) ipq6000
+name: Build OP for 京东云亚瑟(RE-SS-01) JDC AX1800PRO
 
 on:
   workflow_dispatch:
