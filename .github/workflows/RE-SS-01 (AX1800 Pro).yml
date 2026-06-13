@@ -1,4 +1,4 @@
-name: Build OP for IPQ6000-RE-SS-01 (AX1800 Pro)
+name: Build OP for RE-SS-01 (AX1800 Pro)ipq6000
 
 on:
   workflow_dispatch:
