@@ -1,7 +1,7 @@
 apk-openssl base-files block-mount ca-bundle default-settings-chn dnsmasq-full dropbear firewall4 fstools kmod-crypto-hw-eip93 kmod-gpio-button-hotplug kmod-leds-gpio kmod-nf-nathelper kmod-nft-offload libc libgcc libustream-openssl logd luci mtd netifd nftables odhcp6c odhcpd-ipv6only ppp ppp-mod-pppoe procd-ujail uboot-envtools uci uclient-fetch urandom-seed urngd wpad-openssl kmod-mt7603 kmod-mt76x2 kmod-usb3 kmod-usb-ledtrig-usbport luci-theme-argon luci-app-autoreboot luci-i18n-autoreboot-zh-cn ttyd luci-app-ttyd luci-i18n-ttyd-zh-cn luci-app-upnp luci-i18n-upnp-zh-cn luci-app-passwall luci-i18n-passwall-zh-cn xray-core geoview luci-app-homeproxy luci-i18n-homeproxy-zh-cn cloudflared luci-app-cloudflared luci-i18n-cloudflared-zh-cn wireguard-tools kmod-wireguard luci-proto-wireguard zerotier luci-app-zerotier luci-i18n-zerotier-zh-cn
 
 
-# 1. 暴力修改网络配置文件，彻底断开与启动服务的冲突
+# 1. 修改网络配置文件
 sed -i 's/192.168.1.1/192.168.51.1/g' /etc/config/network
 
 # 2. 修改系统主机名
@@ -23,11 +23,17 @@ done
     uci commit wireless
 }
 
-# 4. 【核心增加】将默认 root 登录密码强行修改为: password
-# 使用 Linux 标准的 shadow 密码哈希生成器，100% 兼容 OpenWrt 的 musl-libc
-echo "password" | passwd root --stdin 2>/dev/null || echo -e "password\npassword" | passwd root
+# 4. 修改 root 默认密码为 password（精简掉失效指令，使用最高效的管道流）
+echo -e "password\npassword" | passwd root
 
-# 5. 安全重启网络，让 IP 和 Wi-Fi 彻底平滑就位
-/etc/init.d/system restart
-/etc/init.d/network restart
-wifi reload
+# 5. 【大厂级异步优化】不要直接在这里打断网络！
+# 开启一个后台幽灵进程，等这个脚本安全交差、被系统物理删除 3 秒后，再在后台悄悄重启网络
+(
+    sleep 3
+    /etc/init.d/system restart
+    /etc/init.d/network restart
+    wifi reload
+) &
+
+# 6. 正式向系统交差，退出该脚本
+exit 0
