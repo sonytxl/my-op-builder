@@ -12,7 +12,7 @@ permissions:
 env:
   OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
   OPENWRT_BRANCH: "main"
-  CONFIG_NAME: ipq6000.config
+  CONFIG_NAME: RE-SS-01.config
   FIRMWARE_NAME: immortalwrt-jdcloud-ax1800-pro
   # 👇 官方消音大招：强制底层 Actions 使用 Node 24，彻底干掉即将过期的烦人警告
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
