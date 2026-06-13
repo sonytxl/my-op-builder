@@ -13,7 +13,7 @@ env:
   OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
   OPENWRT_BRANCH: "main"
   CONFIG_NAME: 360v6.config
-  FIRMWARE_NAME: immortalwrt-jdcloud-ax1800-pro
+  FIRMWARE_NAME: immortalwrt-360v6
 
 jobs:
   build:
@@ -125,10 +125,10 @@ jobs:
         if: success()
         with:
           tag_name: ${{ env.release_tag }}
-          name: "🚀 JDCloud AX1800 Pro 闭源满血双擎版 (${{ env.release_date }})"
+          name: "🚀 360v6 闭源满血双擎版 (${{ env.release_date }})"
           files: firmware_release/*
           body: |
-            ## 🚀 京东云亚瑟 (JDCloud RE-SS-01) 专属固件（每月2号自动编译更新）
+            ## 🚀 360v6专属固件（每月2号自动编译更新）
             - **源码仓库**: `VIKINGYFY/immortalwrt` (main 分支)
             - **核心特性**: 纯血高通闭源 Wi-Fi 驱动 + NSS 12.5 满血硬件加速
             
@@ -139,7 +139,6 @@ jobs:
             - ✈️ **科学双擎**: passwall (xray 内核 + HAProxy 负载均衡), HomeProxy (sing-box 内核)
             - 🛡️ **内网穿透**: Cloudflare Zero Trust
             - 🌍 **异地组网**: WireGuard 底层大炮, ZeroTier
-            - 🗄️ **轻量 NAS**: Samba4
             - 🎨 **界面美化**: Argon 主题 + 完美中文支持
                     
             ⚙️ **系统默认信息**:
