@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "🚀 开始执行 JDCloud AX1800 Pro 纯净量产版编译前置任务..."
+echo "🚀 开始执行 qualcomm IPQ50xx/60XX/80xx 纯净量产版编译前置任务..."
 
 # 1. 修改默认 IP
 sed -i 's/192.168.1.1/192.168.61.1/g' package/base-files/files/bin/config_generate
