@@ -37,3 +37,15 @@ echo -e "password\npassword" | passwd root
 
 # 6. 正式向系统交差，退出该脚本
 exit 0
+
+
+
+ZeroTier擦除旧身份证
+
+控制台无情超度（擦除旧身份证）
+打开你的 ttyd 终端或者 SSH 连进去，直接复制并敲下这行加强版的清洗命令：
+
+Bash
+# 一键强行停止进程，并物理抹除所有旧网络的死锁缓存、临时网卡文件和数字身份证
+/etc/init.d/zerotier stop && rm -rf /var/lib/zerotier-one/*
+💡 此时的状态：ZeroTier 在这台路由器上的历史痕迹被 100% 物理蒸发，变成了一张绝对纯净的白纸。
