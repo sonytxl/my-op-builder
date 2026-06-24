@@ -13,7 +13,7 @@ env:
   OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
   OPENWRT_BRANCH: "main"
   CONFIG_NAME: ax6.config
-  FIRMWARE_NAME: immortalwrt-360v6
+  FIRMWARE_NAME: redmi-ax6
 
 jobs:
   build:
@@ -46,14 +46,14 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. ⚡ Setup OpenWrt Ccache (统一 IPQ60xx 家族缓存键值)
+      - name: 4. ⚡ Setup OpenWrt Ccache (统一 IPQ807x 家族硬件加速缓存键)
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/immortalwrt/.ccache
-          # 缓存键名改成了通用族系，这样后续亚瑟/AX5 都可以无缝白嫖这个缓存
-          key: ${{ runner.os }}-openwrt-ipq60xx-ccache-${{ github.sha }}
+          # 修正：把键值牢牢锁定在 IPQ807x 战神家族，白嫖更纯净的高通硬件加速中间件
+          key: ${{ runner.os }}-openwrt-ipq807x-ccache-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-ipq60xx-ccache-
+            ${{ runner.os }}-openwrt-ipq807x-ccache-
 
       - name: 5. Load Feeds configurations
         run: |
@@ -61,16 +61,20 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-      - name: 6. ✨ Generate the .config file (强力注入缓存开关)
+      - name: 6. ✨ Generate the .config file (硬核写入闪存与缓存对齐)
         run: |
           chmod +x ./diy-ipq.sh
-          cd immortalwrt
+          # 修正路径魔术：确保脚本在执行时，能精准命中下层 immortalwrt 目录
+          cp .config ./immortalwrt/.config 2>/dev/null || true
           
+          cd immortalwrt
           cp ../$CONFIG_NAME .config
           
-          # 🔧 架构师核心优化：从物理层面强行开启 Ccache，否则前面的缓存步骤是空气
+          # 强制物理注入编译开关，焊死 Ccache 底层逻辑
           echo "CONFIG_CCACHE=y" >> .config
+          echo "CONFIG_DEVEL=y" >> .config
           
+          # 执行外部预置脚本
           ../diy-ipq.sh
           
           make defconfig
@@ -82,13 +86,12 @@ jobs:
           make download -j8
           find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-      - name: 8. Compile the firmware (限流防爆肝)
+      - name: 8. Compile the firmware (限流防爆，精准对齐官方全局缓存)
         id: compile
         run: |
           cd immortalwrt
-          # 🔧 限制缓存最高占用 5G，防止撑爆 GitHub 仓库 10G 封杀红线
-          mkdir -p .ccache
-          export CCACHE_DIR=$(pwd)/.ccache
+          # 修正：将编译阶段的 ccache 直接锁死在第4步开辟的物理工作区，解决路径打架报错
+          export CCACHE_DIR=${{ github.workspace }}/immortalwrt/.ccache
           ccache -M 5G
           
           echo -e "$(nproc) thread compile"
@@ -112,7 +115,8 @@ jobs:
           find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
           cd firmware_release
           FIRMWARE_DATE=$(date +%Y-%m-%d)
-          for f in *; do mv "$f" "AX1800Pro-${FIRMWARE_DATE}-${f}"; done
+          # 修正：固件命名完美对齐红米 Redmi-AX6 生产力标记
+          for f in *; do mv "$f" "Redmi-AX6-${FIRMWARE_DATE}-${f}"; done
           
       - name: 11. Generate release tag
         if: success()
@@ -128,21 +132,21 @@ jobs:
           name: "🚀 红米AX6 闭源满血双擎版 (${{ env.release_date }})"
           files: firmware_release/*
           body: |
-            ## 🚀 红米AX6专属固件（每月2号自动编译更新）
-            - **源码仓库**: `VIKINGYFY/immortalwrt` (main 分支)
-            - **核心特性**: 纯血高通闭源 Wi-Fi 驱动 + NSS 12.5 满血硬件加速
+            ## 🚀 红米AX6专属高能固件（每月2号自动云更新）
+            - **源码物料**: `VIKINGYFY/immortalwrt` (main 分支)
+            - **硬核底座**: 纯血高通原厂闭源 Wi-Fi 驱动 + NSS 12.5 纯硬件数据流卸载
             
-            🚀 **基础功能**:
-            - 自动重启，终端，ddns，upnp
+            🚀 **开箱即用自动化**:
+            - 自动定时重启，TTYD网页终端，DDNS满血版 wget-ssl，UPnP高并发端口映射
             
-            🧩 **包含核心插件**:
-            - ✈️ **科学双擎**: passwall (xray 内核 + HAProxy 负载均衡), HomeProxy (sing-box 内核)
-            - 🛡️ **内网穿透**: Cloudflare Zero Trust
-            - 🌍 **异地组网**: WireGuard 底层大炮, ZeroTier
-            - 🎨 **界面美化**: Argon 主题 + 完美中文支持
-                    
-            ⚙️ **系统默认信息**:
-            - 默认后台 IP: `192.168.61.1`
-            - 默认密码: `无` (请登录后自行设置)
-            - 默认 Wi-Fi:`Ecom-WiFi` 密码: `password`
-            - 编译时间: ${{ env.release_date }}
+            🧩 **内嵌核心军火库**:
+            - ✈️ **跨境双擎**: HomeProxy (纯血内置 Sing-box 核心) + PassWall (极简化定制 Xray 灾备内核)
+            - 🛡️ **内网守卫**: Cloudflare Zero Trust 隧道
+            - 🌍 **异地维护**: WireGuard 硬件加速管道 + ZeroTier 远程通道
+            - 🎨 **视觉交互**: 现代科技暗黑 Argon 主题 + 100% 汉化对齐
+            
+            ⚙️ **默认基建配线**:
+            - 默认管理 IP: `192.168.61.1`
+            - 默认登录密码: `无` (请登录后第一时间自行设定)
+            - 默认无缝 Wi-Fi:`Ecom-WiFi`  密码: `password`
+            - 交付打包时间: ${{ env.release_date }}
