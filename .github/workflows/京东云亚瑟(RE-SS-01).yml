@@ -13,7 +13,7 @@ env:
   OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
   OPENWRT_BRANCH: "main"
   CONFIG_NAME: RE-SS-01.config
-  FIRMWARE_NAME: immortalwrt-jdcloud-ax1800-pro
+  FIRMWARE_NAME: jdc-ax1800pro
 
 jobs:
   build:
@@ -46,11 +46,11 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. ⚡ Setup OpenWrt Ccache (统一 IPQ60xx 家族缓存键值)
+      - name: 4. ⚡ Setup OpenWrt Ccache (物理对齐 IPQ60xx 家族，无缝共享白嫖 360v6 缓存)
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/immortalwrt/.ccache
-          # 缓存键名改成了通用族系，这样后续亚瑟/AX5 都可以无缝白嫖这个缓存
+          # 核心优化：与 360v6 采用完全相同的键值！亚瑟可以直接秒级加载 360v6 跑好的缓存，免去重复编译内耗
           key: ${{ runner.os }}-openwrt-ipq60xx-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq60xx-ccache-
@@ -61,16 +61,15 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-      - name: 6. ✨ Generate the .config file (强力注入缓存开关)
+      - name: 6. ✨ Generate the .config file (强力注入参数并跑通共享脚本)
         run: |
           chmod +x ./diy-ipq.sh
           cd immortalwrt
           
+          # 把你的 RE-SS-01.config 塞进工作区
           cp ../$CONFIG_NAME .config
           
-          # 🔧 架构师核心优化：从物理层面强行开启 Ccache，否则前面的缓存步骤是空气
-          echo "CONFIG_CCACHE=y" >> .config
-          
+          # 执行改版后的通用型 diy-ipq.sh 脚本，完美适配 2x2 MIMO 芯片和 61.1 网段
           ../diy-ipq.sh
           
           make defconfig
@@ -82,13 +81,12 @@ jobs:
           make download -j8
           find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-      - name: 8. Compile the firmware (限流防爆肝)
+      - name: 8. Compile the firmware (限流防爆，杜绝路径重叠死锁)
         id: compile
         run: |
           cd immortalwrt
-          # 🔧 限制缓存最高占用 5G，防止撑爆 GitHub 仓库 10G 封杀红线
-          mkdir -p .ccache
-          export CCACHE_DIR=$(pwd)/.ccache
+          # 修正：将 Ccache 的环境变量死死咬住工作区绝对路径，彻底根除 Actions 卡死隐患
+          export CCACHE_DIR=${{ github.workspace }}/immortalwrt/.ccache
           ccache -M 5G
           
           echo -e "$(nproc) thread compile"
@@ -112,7 +110,8 @@ jobs:
           find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
           cd firmware_release
           FIRMWARE_DATE=$(date +%Y-%m-%d)
-          for f in *; do mv "$f" "AX1800Pro-${FIRMWARE_DATE}-${f}"; done
+          # 修正：打包标签对齐京东云 JDC-Yaser 生产力资产标记
+          for f in *; do mv "$f" "JDC-Yaser-${FIRMWARE_DATE}-${f}"; done
           
       - name: 11. Generate release tag
         if: success()
@@ -125,25 +124,25 @@ jobs:
         if: success()
         with:
           tag_name: ${{ env.release_tag }}
-          name: "🚀 JDCloud AX1800 Pro 闭源满血双擎版 (${{ env.release_date }})"
+          name: "🚀 京东云亚瑟 AX1800 Pro 闭源满血双擎版 (${{ env.release_date }})"
           files: firmware_release/*
           body: |
-            ## 🚀 京东云亚瑟 (JDCloud RE-SS-01) 专属固件（每月2号自动编译更新）
-            - **源码仓库**: `VIKINGYFY/immortalwrt` (main 分支)
-            - **核心特性**: 纯血高通闭源 Wi-Fi 驱动 + NSS 12.5 满血硬件加速
+            ## 🚀 京东云亚瑟 (JDCloud RE-SS-01) 专属高能固件（每月2号自动云更新）
+            - **源码物料**: `VIKINGYFY/immortalwrt` (main 分支)
+            - **硬核底座**: 纯血高通原厂闭源 Wi-Fi 驱动 + NSS 12.5 纯硬件数据流卸载
             
-            🚀 **基础功能**:
-            - 自动重启，终端，ddns，upnp
+            🚀 **开箱即用自动化**:
+            - 自动定时重启，TTYD网页终端，满血版 wget-ssl，UPnP高并发端口映射
             
-            🧩 **包含核心插件**:
-            - ✈️ **科学双擎**: passwall (xray 内核 + HAProxy 负载均衡), HomeProxy (sing-box 内核)
-            - 🛡️ **内网穿透**: Cloudflare Zero Trust
-            - 🌍 **异地组网**: WireGuard 底层大炮, ZeroTier
-            - 🗄️ **轻量 NAS**: Samba4
-            - 🎨 **界面美化**: Argon 主题 + 完美中文支持
-                    
-            ⚙️ **系统默认信息**:
-            - 默认后台 IP: `192.168.61.1`
-            - 默认密码: `无` (请登录后自行设置)
-            - 默认 Wi-Fi:`Ecom-WiFi` 密码: `password`
-            - 编译时间: ${{ env.release_date }}
+            🧩 **内嵌核心军火库**:
+            - ✈️ **跨境双擎**: HomeProxy (纯血内置 Sing-box 核心) + PassWall (极简化定制 Xray 灾备内核)
+            - 🛡️ **内网守卫**: Cloudflare Zero Trust 隧道
+            - 🌍 **异地维护**: WireGuard 硬件加速管道 + ZeroTier 远程通道
+            - 🗄️ **轻量 NAS 存储**: 满血集成 Samba4 网络共享（完美唤醒内置 128G/256G 固态硬盘）
+            - 🎨 **视觉交互**: 现代科技暗黑 Argon 主题 + 100% 汉化对齐
+            
+            ⚙️ **默认基建配线**:
+            - 默认管理 IP: `192.168.61.1`
+            - 默认登录密码: `无` (请登录后第一时间自行设定)
+            - 默认无缝 Wi-Fi:`Ecom-WiFi`  密码: `password`
+            - 交付打包时间: ${{ env.release_date }}
