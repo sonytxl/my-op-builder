@@ -12,7 +12,7 @@ permissions:
 env:
   OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
   OPENWRT_BRANCH: "main"
-  CONFIG_NAME: ax6.config
+  CONFIG_NAME: redmi-ax6.config
   FIRMWARE_NAME: redmi-ax6
 
 jobs:
