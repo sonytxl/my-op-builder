@@ -14,6 +14,7 @@ env:
   OPENWRT_BRANCH: "main"
   CONFIG_NAME: redmi-ax6-d.config
   FIRMWARE_NAME: redmi-ax6
+  ACTIONS_RUNNER_FORCE_NODE24_WARNING: "false"
 
 jobs:
   build:
@@ -49,7 +50,7 @@ jobs:
 
       - name: 3. Clone Correct OpenWrt source code
         run: |
-          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
+          git clone --depth 1 -b $OPENWRT_BRANCH$OPENWRT_SOURCE immortalwrt
 
       - name: 4. ⚡ Setup OpenWrt Ccache (统一 IPQ807x 家族硬件加速缓存键)
         uses: actions/cache@v4
@@ -72,16 +73,16 @@ jobs:
           # 2. 准备 files 覆盖目录 (打包固件时直接注入 rootfs 根目录)
           mkdir -p files/usr/bin
 
-          # 3. 下载官方发布的 daed-linux-arm64.zip
+          # 3. 精确下载官方发布的 daed-linux-arm64.zip (包含 2.1.1 完整前后端)
           echo "Downloading official daed v2.1.1 for arm64..."
           curl -fL -o daed.zip "https://github.com/daeuniverse/daed/releases/download/v2.1.1/daed-linux-arm64.zip"
 
-          # 4. 解压到临时目录并精准复制二进制到 files/usr/bin/daed
+          # 4. 解压并精准提取内部二进制到 files/usr/bin/daed
           unzip -o daed.zip
           cp -f daed-linux-arm64/daed-linux-arm64 files/usr/bin/daed
           chmod +x files/usr/bin/daed
 
-          # (可选) 同时复制官方附带的 geo 规则文件，确保规则齐全
+          # 复制自带规则文件至系统路径
           mkdir -p files/usr/share/daed
           cp -f daed-linux-arm64/*.dat files/usr/share/daed/ 2>/dev/null || true
           
@@ -127,7 +128,7 @@ jobs:
           echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
           echo "CONFIG_PACKAGE_kmod-sched-core=y" >> .config
           
-          # 再次确保旧核心被禁用，避免编译旧版本覆盖 files 目录
+          # 再次确保旧核心被禁用，避免编译旧源码覆盖 files 目录
           sed -i 's/CONFIG_PACKAGE_daed=y/# CONFIG_PACKAGE_daed is not set/g' .config
           
           make defconfig
@@ -172,8 +173,8 @@ jobs:
       - name: 11. Generate release tag
         if: success()
         run: |
-          echo "release_tag=$(TZ='Asia/Shanghai' date +"\%Y.\%m.\%d-\%H\%M")" >> $GITHUB_ENV
-          echo "release_date=$(TZ='Asia/Shanghai' date +"\%Y-\%m-\%d \%H:\%M")" >> $GITHUB_ENV
+          echo "release_tag=v$(TZ='Asia/Shanghai' date +'\%Y.\%m.\%d-\%H\%M')" >> $GITHUB_ENV
+          echo "release_date=$(TZ='Asia/Shanghai' date +'\%Y-\%m-\%d \%H:\%M')" >> $GITHUB_ENV
 
       - name: 12. Upload firmware to Release
         uses: softprops/action-gh-release@v2
