@@ -59,28 +59,30 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq807x-ccache-
 
-      - name: 5. Load Feeds & Clone QiuSimons daed (kix活库分支) & Bump to v2.1.1
+      - name: 5. Load Feeds & Setup daed v2.1.1 Binary Directly
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # 1. 动态拉取 QiuSimons 大佬最新活库 kix 分支到 package/dae
+          # 1. 仍然拉取 QiuSimons 的插件以保留系统服务、防火墙和 init 启动脚本
           rm -rf package/dae
           git clone -b kix https://github.com/QiuSimons/luci-app-daed.git package/dae
 
-          # 2. 强行将 Makefile 内的版本号修正为官方最新的 2.1.1
-          # (遍历查找 daed 的 Makefile 并替换版本变量)
-          find package/dae/ -name "Makefile" | while read -r mf; do
-            if grep -q "PKG_VERSION" "$mf" && grep -q "daed" "$mf"; then
-              echo "Patching version in $mf..."
-              sed -i -E 's/(PKG_VERSION:=).*/\12.1.1/' "$mf"
-              sed -i -E 's/(PKG_SOURCE_VERSION:=).*/\1v2.1.1/' "$mf"
-              # 清空旧校验和，防止下载新包时报 hash mismatch 错误
-              sed -i -E 's/(PKG_HASH:=).*/\1skip/' "$mf" 2>/dev/null || true
-              sed -i -E 's/(PKG_MIRROR_HASH:=).*/\1skip/' "$mf" 2>/dev/null || true
-            fi
-          done
+          # 2. 准备 files 覆盖目录 (OpenWrt 会在打包固件时直接把 files 目录的内容覆盖进系统根目录)
+          mkdir -p files/usr/bin
+
+          # 3. 动态从官方下载 arm64 架构的 daed v2.1.1 满血独立版 (红米AX6是 IPQ8071A，属于 aarch64/arm64)
+          echo "Downloading official daed v2.1.1 for arm64..."
+          wget -qO daed.tar.gz https://github.com/daeuniverse/daed/releases/download/v2.1.1/daed-linux-arm64.tar.gz || \
+          wget -qO daed.tar.gz https://github.com/daeuniverse/daed/releases/download/v2.1.1/daed-linux-aarch64.tar.gz
+
+          # 解压并放置到 files/usr/bin/daed
+          tar -zxf daed.tar.gz
+          cp -f daed files/usr/bin/daed
+          chmod +x files/usr/bin/daed
+          
+          echo "daed 2.1.1 binary placed into files overlay successfully!"
 
       - name: 6. ✨ Generate .config & Inject BTF/eBPF Hard Requirements
         run: |
