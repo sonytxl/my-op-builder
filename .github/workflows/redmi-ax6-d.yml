@@ -40,16 +40,16 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           rustc --version
           
-          # 2. 安装 pnpm 前端工具链 (daed UI 编译必备)
+          # 2. 安装 pnpm 前端工具链
           sudo npm install -g pnpm
           
-          # 3. 补齐 OpenWrt 编译基础包 + eBPF/BTF 编译关键依赖 (clang, llvm, zstd)
+          # 3. 补齐 OpenWrt 编译基础包 + eBPF/BTF 编译关键依赖
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install -y ccache ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
       - name: 3. Clone Correct OpenWrt source code
         run: |
-          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
+          git clone --depth 1 -b $OPENWRT_BRANCH$OPENWRT_SOURCE immortalwrt
 
       - name: 4. ⚡ Setup OpenWrt Ccache (统一 IPQ807x 家族硬件加速缓存键)
         uses: actions/cache@v4
@@ -59,30 +59,29 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq807x-ccache-
 
-      - name: 5. Load Feeds & Setup daed v2.1.1 Binary Directly
+      - name: 5. Load Feeds & Setup daed v2.1.1 Official Arm64 Binary
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # 1. 仍然拉取 QiuSimons 的插件以保留系统服务、防火墙和 init 启动脚本
+          # 1. 拉取 QiuSimons 仓库保留 LuCI Web 控制界面与系统服务
           rm -rf package/dae
           git clone -b kix https://github.com/QiuSimons/luci-app-daed.git package/dae
 
-          # 2. 准备 files 覆盖目录 (OpenWrt 会在打包固件时直接把 files 目录的内容覆盖进系统根目录)
+          # 2. 准备 files 覆盖目录 (打包固件时直接注入 rootfs 根目录)
           mkdir -p files/usr/bin
 
-          # 3. 动态从官方下载 arm64 架构的 daed v2.1.1 满血独立版 (红米AX6是 IPQ8071A，属于 aarch64/arm64)
+          # 3. 精确下载官方发布的 daed-linux-arm64.zip (包含 2.1.1 完整前后端)
           echo "Downloading official daed v2.1.1 for arm64..."
-          wget -qO daed.tar.gz https://github.com/daeuniverse/daed/releases/download/v2.1.1/daed-linux-arm64.tar.gz || \
-          wget -qO daed.tar.gz https://github.com/daeuniverse/daed/releases/download/v2.1.1/daed-linux-aarch64.tar.gz
+          wget -qO daed.zip https://github.com/daeuniverse/daed/releases/download/v2.1.1/daed-linux-arm64.zip
 
-          # 解压并放置到 files/usr/bin/daed
-          tar -zxf daed.tar.gz
+          # 解压并注入 files 目录
+          unzip -o daed.zip
           cp -f daed files/usr/bin/daed
           chmod +x files/usr/bin/daed
           
-          echo "daed 2.1.1 binary placed into files overlay successfully!"
+          echo "daed 2.1.1 binary placed into files/usr/bin/daed successfully!"
 
       - name: 6. ✨ Generate .config & Inject BTF/eBPF Hard Requirements
         run: |
@@ -108,7 +107,7 @@ jobs:
           CONFIG_KERNEL_XDP_SOCKETS=y
           CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
           CONFIG_PACKAGE_luci-app-daed=y
-          CONFIG_PACKAGE_daed=y
+          # CONFIG_PACKAGE_daed is not set
           EOF
           
           # 3. 执行外部预置 DIY 脚本
@@ -123,6 +122,9 @@ jobs:
           echo "CONFIG_PACKAGE_ip-full=y" >> .config
           echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
           echo "CONFIG_PACKAGE_kmod-sched-core=y" >> .config
+          
+          # 再次确保旧核心被禁用，避免编译旧版本覆盖 files 目录
+          sed -i 's/CONFIG_PACKAGE_daed=y/# CONFIG_PACKAGE_daed is not set/g' .config
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
@@ -166,8 +168,8 @@ jobs:
       - name: 11. Generate release tag
         if: success()
         run: |
-          echo "release_tag=$(TZ='Asia/Shanghai' date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
-          echo "release_date=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M")" >> $GITHUB_ENV
+          echo "release_tag=$(TZ='Asia/Shanghai' date +"\%Y.\%m.\%d-\%H\%M")" >> $GITHUB_ENV
+          echo "release_date=$(TZ='Asia/Shanghai' date +"\%Y-\%m-\%d \%H:\%M")" >> $GITHUB_ENV
 
       - name: 12. Upload firmware to Release
         uses: softprops/action-gh-release@v2
@@ -185,7 +187,7 @@ jobs:
             - 自动定时重启，TTYD网页终端，DDNS满血版 wget-ssl，UPnP高并发端口映射
             
             🧩 **内嵌核心军火库**:
-            - ⚡ **eBPF 狂暴引擎**: daed (QiuSimons kix活库分支 + 原生 BTF 内核集成)
+            - ⚡ **eBPF 狂暴引擎**: daed (官方 v2.1.1 满血版 + 原生 BTF 内核集成)
             - ✈️ **跨境双擎**: HomeProxy (纯血内置 Sing-box 核心) + PassWall (极简化定制 Xray 灾备内核)
             - 🛡️ **内网守卫**: Cloudflare Zero Trust 隧道
             - 🌍 **异地维护**: WireGuard 硬件加速管道 + ZeroTier 远程通道
