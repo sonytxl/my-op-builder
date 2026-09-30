@@ -50,7 +50,7 @@ jobs:
 
       - name: 3. Clone Correct OpenWrt source code
         run: |
-          git clone --depth 1 -b $OPENWRT_BRANCH$OPENWRT_SOURCE immortalwrt
+          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
       - name: 4. ⚡ Setup OpenWrt Ccache (统一 IPQ807x 家族硬件加速缓存键)
         uses: actions/cache@v4
